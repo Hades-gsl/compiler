@@ -4,6 +4,10 @@ FLEX = flex
 BISON = bison
 CFLAGS = -std=c99
 
+ifdef ENABLE_DEBUG
+    CFLAGS += -DDEBUG -g
+endif
+
 # 编译目标：src目录下的所有.c文件
 CFILES = $(shell find ./ -name "*.c")
 OBJS = $(CFILES:.c=.o)
