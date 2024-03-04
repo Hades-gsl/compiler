@@ -1,5 +1,8 @@
 lex.yy.c
+
 syntax.yy.c
 syntax.tab.c
 syntax.tab.h
+syntax.output
+
 *.o
