@@ -1,4 +1,16 @@
+#include <assert.h>
 #include <stdio.h>
+
+#include "mbtree.h"
+#include "syntax.tab.h"
+
+MBTreeNode* root = NULL;
+
+extern int yyparse();
+extern int yyrestart(FILE*);
+extern void yyerror(const char* s);
+
+void yyerror(const char* s) { fprintf(stderr, "Syntax error: %s\n", s); }
 
 int main(int argc, char** argv) {
   if (argc <= 1) return 1;
@@ -10,5 +22,8 @@ int main(int argc, char** argv) {
 
   yyrestart(f);
   yyparse();
+
+  fclose(f);
+
   return 0;
 }
