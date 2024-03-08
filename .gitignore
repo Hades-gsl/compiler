@@ -6,3 +6,5 @@ syntax.tab.h
 syntax.output
 
 *.o
+
+parser
