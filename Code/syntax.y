@@ -1,5 +1,12 @@
 %{
+#define YYSTYPE MBTreeNode*
 
+#include <stdio.h>
+#include "mbtree.h"
+#include "lex.yy.c"
+
+extern MBTreeNode* root;
+extern void yyerror(const char *s);
 %}
 
 %token INT     
@@ -32,7 +39,8 @@
 
 %%
 
-Program : ExtDefList
+Program : ExtDefList                            {$$ = newMBTreeNode(VAL_EMPTY, _Program, $1->data->lineno); addMBTreeNode($$, $1, NULL); root = $$;}
+    ;
 ExtDefList : ExtDef ExtDefList                  {}
     | 
     ;
