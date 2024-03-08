@@ -1,24 +1,29 @@
 %{
+#include <stdio.h>
+
 #include "syntax.tab.h"
+#include "mbtree.h"
+
+#define YY_VAL(v, t)\
+    yylval = newMBTreeNode(v, _##t, yylineno)
 %}
 
 %option yylineno
 
 INT         0|([1-9][0-9]*)
 FLOAT       [0-9]+\.[0-9]+
-ID          ([a-zA-Z]|_)([a-zA-Z]|_|[0-9])*
-SEMI        ;
-COMMA       ,
-ASSIGNOP    =
+SEMI        ";"
+COMMA       ","
+ASSIGNOP    "="
 RELOP       >|<|>=|<=|==|!=
 PLUS        \+
-MINUS       -
+MINUS       "-"
 STAR        \*
-DIV         /
-AND         &&
+DIV         "/"
+AND         "&&"
 OR          \|\|
 DOT         \.
-NOT         !
+NOT         "!"
 TYPE        int|float
 LP          \(
 RP          \)
@@ -26,41 +31,43 @@ LB          \[
 RB          \]
 LC          \{
 RC          \}
-STRUCT      struct
-RETURN      return
-IF          if
-ELSE        else
-WHILE       while
+STRUCT      "struct"
+RETURN      "return"
+IF          "if"
+ELSE        "else"
+WHILE       "while"
+ID          ([a-zA-Z]|_)([a-zA-Z]|_|[0-9])*
+WHITE       [\t\n ]
 
 %%
 
-INT       { return INT     ; }
-FLOAT     { return FLOAT   ; }
-ID        { return ID      ; }
-SEMI      { return SEMI    ; }
-COMMA     { return COMMA   ; }
-ASSIGNOP  { return ASSIGNOP; }
-RELOP     { return RELOP   ; }
-PLUS      { return PLUS    ; }
-MINUS     { return MINUS   ; }
-STAR      { return STAR    ; }
-DIV       { return DIV     ; }
-AND       { return AND     ; }
-OR        { return OR      ; }
-DOT       { return DOT     ; }
-NOT       { return NOT     ; }
-TYPE      { return TYPE    ; }
-LP        { return LP      ; }
-RP        { return RP      ; }
-LB        { return LB      ; }
-RB        { return RB      ; }
-LC        { return LC      ; }
-RC        { return RC      ; }
-STRUCT    { return STRUCT  ; }
-RETURN    { return RETURN  ; }
-IF        { return IF      ; }
-ELSE      { return ELSE    ; }
-WHILE     { return WHILE   ; }
+{INT}       { YY_VAL(VAL_INT(yytext), INT); return INT; }
+{FLOAT}     { return FLOAT; }
+{SEMI}      { YY_VAL(VAL_EMPTY, SEMI); return SEMI; }
+{COMMA}     { YY_VAL(VAL_EMPTY, COMMA); return COMMA; }
+{ASSIGNOP}  { YY_VAL(VAL_EMPTY, ASSIGNOP); return ASSIGNOP; }
+{RELOP}     { return RELOP; }
+{PLUS}      { YY_VAL(VAL_EMPTY, PLUS); return PLUS; }
+{MINUS}     { YY_VAL(VAL_EMPTY, MINUS); return MINUS; }
+{STAR}      { YY_VAL(VAL_EMPTY, STAR); return STAR; }
+{DIV}       { YY_VAL(VAL_EMPTY, DIV); return DIV; }
+{AND}       { YY_VAL(VAL_EMPTY, AND); return AND; }
+{OR}        { YY_VAL(VAL_EMPTY, OR); return OR; }
+{DOT}       { YY_VAL(VAL_EMPTY, DOT); return DOT; }
+{NOT}       { YY_VAL(VAL_EMPTY, NOT); return NOT; }
+{TYPE}      { YY_VAL(VAL_EMPTY, TYPE); return TYPE; }
+{LP}        { YY_VAL(VAL_EMPTY, LP); return LP; }
+{RP}        { YY_VAL(VAL_EMPTY, RP); return RP; }
+{LB}        { YY_VAL(VAL_EMPTY, LB); return LB; }
+{RB}        { YY_VAL(VAL_EMPTY, RB); return RB; }
+{LC}        { YY_VAL(VAL_EMPTY, LC); return LC; }
+{RC}        { YY_VAL(VAL_EMPTY, RC); return RC; }
+{STRUCT}    { YY_VAL(VAL_EMPTY, STRUCT); return STRUCT; }
+{RETURN}    { YY_VAL(VAL_EMPTY, RETURN); return RETURN; }
+{IF}        { YY_VAL(VAL_EMPTY, IF); return IF; }
+{ELSE}      { YY_VAL(VAL_EMPTY, ELSE); return ELSE; }
+{WHILE}     { YY_VAL(VAL_EMPTY, WHILE); return WHILE; }
+{ID}        { return ID; }
+{WHITE}     ;
 
 %%
-
