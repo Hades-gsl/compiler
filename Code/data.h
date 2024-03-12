@@ -34,7 +34,7 @@ typedef enum {
   _ExtDef,
   _ExtDecList,
   _Specifier,
-  _StructSpecifie,
+  _StructSpecifier,
   _OptTag,
   _Tag,
   _VarDec,
@@ -50,13 +50,13 @@ typedef enum {
   _Dec,
   _Exp,
   _Args
-} Node_type;
+} Node_type;//* 枚举抽象语法树节点类型 *//
 
 typedef union {
   int val_int;
   float val_float;
   char* val_str;
-} Val;
+} Val; //* 联合类型 整、浮、字符串指针 *//
 
 #define VAL_EMPTY \
   (Val) { .val_str = NULL }
@@ -65,12 +65,12 @@ typedef union {
 #define VAL_FLOAT(x) \
   (Val) { .val_float = atof(x) }
 #define VAL_STR(x) \
-  (Val) { .val_string = (x) }
+  (Val) { .val_string = (x) }  //* 宏用于创建Val类型的值 *//
 
 typedef struct {
   Node_type type;
   Val value;
   unsigned int lineno;
-} Date;
+} Date;//* AST_Node 节点词法单元名、属性值、行号 *//
 
 #endif  // DATA_H

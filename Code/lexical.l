@@ -42,7 +42,7 @@ WHITE       [\t\n ]
 %%
 
 {INT}       { YY_VAL(VAL_INT(yytext), INT); return INT; }
-{FLOAT}     { return FLOAT; }
+{FLOAT}     { YY_VAL(VAL_FLOAT(yytext),FLOAT); return FLOAT; }
 {SEMI}      { YY_VAL(VAL_EMPTY, SEMI); return SEMI; }
 {COMMA}     { YY_VAL(VAL_EMPTY, COMMA); return COMMA; }
 {ASSIGNOP}  { YY_VAL(VAL_EMPTY, ASSIGNOP); return ASSIGNOP; }
@@ -67,7 +67,7 @@ WHITE       [\t\n ]
 {IF}        { YY_VAL(VAL_EMPTY, IF); return IF; }
 {ELSE}      { YY_VAL(VAL_EMPTY, ELSE); return ELSE; }
 {WHILE}     { YY_VAL(VAL_EMPTY, WHILE); return WHILE; }
-{ID}        { return ID; }
+{ID}        { YY_VAL(VAL_STR(yytext),ID); return ID; }
 {WHITE}     ;
 
 %%

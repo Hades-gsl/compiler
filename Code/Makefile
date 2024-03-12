@@ -4,7 +4,7 @@ FLEX = flex
 BISON = bison
 CFLAGS = -std=c99
 
-ifdef ENABLE_DEBUG
+ifdef ENABLE_DEBUG  #* 预处理宏DEBUG -g生成调试信息 *#
     CFLAGS += -DDEBUG -g
 endif
 
