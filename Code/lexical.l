@@ -46,7 +46,7 @@ WHITE       [\t\n ]
 {SEMI}      { YY_VAL(VAL_EMPTY, SEMI); return SEMI; }
 {COMMA}     { YY_VAL(VAL_EMPTY, COMMA); return COMMA; }
 {ASSIGNOP}  { YY_VAL(VAL_EMPTY, ASSIGNOP); return ASSIGNOP; }
-{RELOP}     { return RELOP; }
+{RELOP}     { YY_VAL(VAL_EMPTY,RELOP);return RELOP; }
 {PLUS}      { YY_VAL(VAL_EMPTY, PLUS); return PLUS; }
 {MINUS}     { YY_VAL(VAL_EMPTY, MINUS); return MINUS; }
 {STAR}      { YY_VAL(VAL_EMPTY, STAR); return STAR; }
