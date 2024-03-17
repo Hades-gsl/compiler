@@ -65,7 +65,7 @@ typedef union {
 #define VAL_FLOAT(x) \
   (Val) { .val_float = atof(x) }
 #define VAL_STR(x) \
-  (Val) { .val_string = (x) }  //* 宏用于创建Val类型的值 *//
+  (Val) { .val_str = (x) }  //* 宏用于创建Val类型的值 *//
 
 typedef struct {
   Node_type type;
