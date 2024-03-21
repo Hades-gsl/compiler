@@ -10,6 +10,10 @@ extern void yyerror(const char *s);
 extern MBTreeNode* empty;
 %}
 
+%union {
+    MBTreeNode* node;
+}
+
 %token INT     
 %token FLOAT   
 %token ID      
@@ -48,6 +52,8 @@ extern MBTreeNode* empty;
 %left  DOT LP RP LB RB
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
+
+%type<node> Program, ExtDefList, ExtDef, ExtDecList, Specifier, StructSpecifier, OptTag, Tag, VarDec, FunDec, VarList, ParamDec, CompSt, StmtList, Stmt, DefList, Def, DecList, Dec, Exp, Args
 
 %%
 
