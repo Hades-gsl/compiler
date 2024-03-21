@@ -74,7 +74,7 @@ void displayMBTreeNode(const MBTreeNode* node, unsigned indent) {
       case _TYPE:
         printf(": %s\n", node->data->value.val_str);
         break;
-      case_INT:
+      case _INT:
         printf(": %d\n", node->data->value.val_int);
         break;
       case _FLOAT:
