@@ -4,6 +4,13 @@
 #include "syntax.tab.h"
 #include "mbtree.h"
 
+int yycolumn = 1;
+#define YY_USER_ACTION \
+    yylloc.first_line = yylloc.last_line = yylineno; \
+    yylloc.first_column = yycolumn; \
+    yylloc.last_column = yycolumn + yyleng - 1; \
+    yycolumn += yyleng;
+
 #define YY_VAL(v, t)\
     yylval = newMBTreeNode(v, _##t, yylineno)
 %}
@@ -12,18 +19,18 @@
 
 INT         0|([1-9][0-9]*)
 FLOAT       [0-9]+\.[0-9]+
-SEMI        ";"
-COMMA       ","
-ASSIGNOP    "="
+SEMI        ;
+COMMA       ,
+ASSIGNOP    =
 RELOP       >|<|>=|<=|==|!=
 PLUS        \+
-MINUS       "-"
+MINUS       -
 STAR        \*
-DIV         "/"
-AND         "&&"
+DIV         \/
+AND         &&
 OR          \|\|
 DOT         \.
-NOT         "!"
+NOT         !
 TYPE        int|float
 LP          \(
 RP          \)
@@ -31,11 +38,11 @@ LB          \[
 RB          \]
 LC          \{
 RC          \}
-STRUCT      "struct"
-RETURN      "return"
-IF          "if"
-ELSE        "else"
-WHILE       "while"
+STRUCT      struct
+RETURN      return
+IF          if
+ELSE        else
+WHILE       while
 ID          ([a-zA-Z]|_)([a-zA-Z]|_|[0-9])*
 WHITE       [\t\n ]
 
@@ -55,7 +62,7 @@ WHITE       [\t\n ]
 {OR}        { YY_VAL(VAL_EMPTY, OR); return OR; }
 {DOT}       { YY_VAL(VAL_EMPTY, DOT); return DOT; }
 {NOT}       { YY_VAL(VAL_EMPTY, NOT); return NOT; }
-{TYPE}      { YY_VAL(VAL_EMPTY, TYPE); return TYPE; }
+{TYPE}      { YY_VAL(val_str(yytext), TYPE); return TYPE; }
 {LP}        { YY_VAL(VAL_EMPTY, LP); return LP; }
 {RP}        { YY_VAL(VAL_EMPTY, RP); return RP; }
 {LB}        { YY_VAL(VAL_EMPTY, LB); return LB; }
@@ -67,7 +74,9 @@ WHITE       [\t\n ]
 {IF}        { YY_VAL(VAL_EMPTY, IF); return IF; }
 {ELSE}      { YY_VAL(VAL_EMPTY, ELSE); return ELSE; }
 {WHILE}     { YY_VAL(VAL_EMPTY, WHILE); return WHILE; }
-{ID}        { YY_VAL(VAL_STR(yytext),ID); return ID; }
+{ID}        { YY_VAL(val_str(yytext),ID); return ID; }
+\n          { yycolumn = 1; }
 {WHITE}     ;
+.           { printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext);}
 
 %%
