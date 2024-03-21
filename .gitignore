@@ -8,3 +8,5 @@ syntax.output
 *.o
 
 parser
+
+.vscode/
