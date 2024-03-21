@@ -2,16 +2,17 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
 
-MBTreeNode* newMBTreeNodeData(Date* data) {
+MBTreeNode* newMBTreeNodeData(Data* data) {
   MBTreeNode* node = (MBTreeNode*)malloc(sizeof(MBTreeNode));
   *node = (MBTreeNode){.data = data, .firstChild = NULL, .nextSibling = NULL};
   return node;
 }
 
 MBTreeNode* newMBTreeNode(Val val, Node_type type, unsigned int lineno) {
-  Date* data = (Date*)malloc(sizeof(Date));
-  *data = (Date){.type = type, .value = val, .lineno = lineno};
+  Data* data = (Data*)malloc(sizeof(Data));
+  *data = (Data){.type = type, .value = val, .lineno = lineno};
   return newMBTreeNodeData(data);
 }
 
@@ -56,10 +57,37 @@ void freeMBTreeNode(MBTreeNode* node) {
   free(node);
 }
 
-void displayMBTreeNode(MBTreeNode* node) {
-  if (node == NULL) return;
-  //   printf("%s\n", node->data->date);
-  for (MBTreeNode* n = node->firstChild; n != NULL; n = n->nextSibling) {
-    displayMBTreeNode(n);
+void displayMBTreeNode(const MBTreeNode* node, unsigned indent) {
+  if (node == NULL || node->data->type == _Empty) return;
+  if (node->firstChild != NULL && node->firstChild->data->type == _Empty)
+    return;
+
+  for (int i = 0; i < indent; i++) {
+    printf(" ");
+  }
+  if (is_non_terminal(node->data->type)) {
+    printf("%s (%u)\n", type_strs[node->data->type], node->data->lineno);
+  } else {
+    printf("%s", type_strs[node->data->type]);
+    switch (node->data->type) {
+      case _ID:
+      case _TYPE:
+        printf(": %s\n", node->data->value.val_str);
+        break;
+      case_INT:
+        printf(": %d\n", node->data->value.val_int);
+        break;
+      case _FLOAT:
+        printf(": %f\n", node->data->value.val_float);
+        break;
+      default:
+        printf("\n");
+        break;
+    }
+  }
+
+  for (MBTreeNode* child = node->firstChild; child != NULL;
+       child = child->nextSibling) {
+    displayMBTreeNode(child, indent + 2);
   }
 }

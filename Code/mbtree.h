@@ -6,13 +6,13 @@
 #include "data.h"
 
 typedef struct MBTreeNode {
-  Date* data;
+  Data* data;
   struct MBTreeNode* firstChild;
   struct MBTreeNode* nextSibling;
 } MBTreeNode;
 
 // create a new node
-MBTreeNode* newMBTreeNodeData(Date* Data);
+MBTreeNode* newMBTreeNodeData(Data* Data);
 MBTreeNode* newMBTreeNode(Val val, Node_type type, unsigned int lineno);
 
 // add children to the parent node, the last argument must be NULL
@@ -28,6 +28,6 @@ void removeMBTreeNode(MBTreeNode* parent, MBTreeNode* child);
 void freeMBTreeNode(MBTreeNode* node);
 
 // print the tree
-void displayMBTreeNode(MBTreeNode* node);
+void displayMBTreeNode(const MBTreeNode* node, unsigned indent);
 
 #endif  // MBTREE_H
