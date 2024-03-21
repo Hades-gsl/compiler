@@ -1,6 +1,10 @@
 #ifndef DATA_H
 #define DATA_H
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 typedef enum {
   _INT,
   _FLOAT,
@@ -49,14 +53,34 @@ typedef enum {
   _DecList,
   _Dec,
   _Exp,
-  _Args
-} Node_type;//* 枚举抽象语法树节点类型 *//
+  _Args,
+  _Empty,
+} Node_type;  //* 枚举抽象语法树节点类型 *//
+
+const static char* type_strs[] = {
+    "INT",        "FLOAT",      "ID",
+    "SEMI",       "COMMA",      "ASSIGNOP",
+    "RELOP",      "PLUS",       "MINUS",
+    "STAR",       "DIV",        "AND",
+    "OR",         "DOT",        "NOT",
+    "TYPE",       "LP",         "RP",
+    "LB",         "RB",         "LC",
+    "RC",         "STRUCT",     "RETURN",
+    "IF",         "ELSE",       "WHILE",
+    "Program",    "ExtDefList", "ExtDef",
+    "ExtDecList", "Specifier",  "StructSpecifier",
+    "OptTag",     "Tag",        "VarDec",
+    "FunDec",     "VarList",    "ParamDec",
+    "CompSt",     "StmtList",   "Stmt",
+    "DefList",    "Def",        "DecList",
+    "Dec",        "Exp",        "Args",
+};
 
 typedef union {
   int val_int;
   float val_float;
   char* val_str;
-} Val; //* 联合类型 整、浮、字符串指针 *//
+} Val;  //* 联合类型 整、浮、字符串指针 *//
 
 #define VAL_EMPTY \
   (Val) { .val_str = NULL }
@@ -64,13 +88,28 @@ typedef union {
   (Val) { .val_int = atoi(x) }
 #define VAL_FLOAT(x) \
   (Val) { .val_float = atof(x) }
-#define VAL_STR(x) \
-  (Val) { .val_str = (x) }  //* 宏用于创建Val类型的值 *//
 
 typedef struct {
   Node_type type;
   Val value;
   unsigned int lineno;
-} Date;//* AST_Node 节点词法单元名、属性值、行号 *//
+} Data;  //* AST_Node 节点词法单元名、属性值、行号 *//
+
+static inline int is_non_terminal(const Node_type type) {
+  return type >= _Program && type < _Empty;
+}
+
+static Val val_str(const char* s) {
+  size_t len = strlen(s) + 1;  // +1 for the null terminator
+  char* cp = malloc(len);      // Allocate memory for the string
+  if (cp) {
+    strncpy(cp, s, len);  // Copy the string, including the null terminator
+    return (Val){.val_str = cp};
+  } else {
+    // Handle memory allocation failure
+    assert(0);
+    return (Val){.val_str = NULL};
+  }
+}
 
 #endif  // DATA_H
