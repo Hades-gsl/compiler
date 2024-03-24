@@ -86,6 +86,7 @@ VarList : ParamDec COMMA VarList                {$$ = newMBTreeNode(VAL_EMPTY, _
 ParamDec : Specifier VarDec                     {$$ = newMBTreeNode(VAL_EMPTY, _ParamDec, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     ; 
 CompSt : LC DefList StmtList RC                 {$$ = newMBTreeNode(VAL_EMPTY, _CompSt, @$.first_line); addMBTreeNode($$, $4, $3, $2, $1, NULL);}
+    | error RC
     ;               
 StmtList : Stmt StmtList                        {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     |                                           {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, empty, NULL);}
@@ -96,6 +97,7 @@ Stmt : Exp SEMI                                 {$$ = newMBTreeNode(VAL_EMPTY, _
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE   {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
     | IF LP Exp RP Stmt ELSE Stmt               {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $7, $6, $5, $4, $3, $2, $1, NULL);}
     | WHILE LP Exp RP Stmt                      {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
+    | error SEMI
     ;               
 DefList : Def DefList                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     |                                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, empty, NULL);}
@@ -108,7 +110,6 @@ DecList : Dec                                   {$$ = newMBTreeNode(VAL_EMPTY, _
 Dec : VarDec                                    {$$ = newMBTreeNode(VAL_EMPTY, _VarDec, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | VarDec ASSIGNOP Exp                       {$$ = newMBTreeNode(VAL_EMPTY, _Dec, @$.first_line); addMBTreeNode($$, $3,$2, $1, NULL);}
     ;
-
 Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Exp AND Exp                               {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Exp OR Exp                                {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
@@ -127,6 +128,7 @@ Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _
     | ID                                        {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | INT                                       {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | FLOAT                                     {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
+    | error RP
     ;               
 Args : Exp COMMA Args                           {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Exp                                       {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $1, NULL);}

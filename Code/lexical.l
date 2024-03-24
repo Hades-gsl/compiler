@@ -4,6 +4,8 @@
 #include "syntax.tab.h"
 #include "mbtree.h"
 
+extern int has_error;
+
 int yycolumn = 1;
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line = yylineno; \
@@ -14,7 +16,6 @@ int yycolumn = 1;
 #define YY_VAL(v, t)\
     yylval = newMBTreeNode(v, _##t, yylineno)
 %}
-
 %option yylineno
 
 INT         0|([1-9][0-9]*)
@@ -77,6 +78,10 @@ WHITE       [\t\n ]
 {ID}        { YY_VAL(val_str(yytext),ID); return ID; }
 \n          { yycolumn = 1; }
 {WHITE}     ;
-.           { printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext);}
+.           { 
+                // printf("A%d\n", yylineno);
+                printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext); 
+                has_error = 1; 
+            }
 
 %%

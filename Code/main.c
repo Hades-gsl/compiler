@@ -6,6 +6,7 @@
 
 MBTreeNode* root = NULL;
 MBTreeNode* empty;
+int has_error = 0;
 
 extern int yyparse();
 extern int yyrestart(FILE*);
@@ -28,7 +29,7 @@ int main(int argc, char** argv) {
 
   fclose(f);
 
-  displayMBTreeNode(root, 0);
+  if (!has_error) displayMBTreeNode(root, 0);
 
   return 0;
 }
