@@ -13,7 +13,7 @@ void yyerror(const char* msg);
 %}
 
 %locations
-%define parse.error detailed
+%define parse.error verbose
 
 %token INT     
 %token FLOAT   
