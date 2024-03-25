@@ -1,4 +1,3 @@
-# 编译器设定和编译选项
 CC = gcc
 FLEX = flex
 BISON = bison
@@ -8,7 +7,6 @@ ifdef ENABLE_DEBUG
     CFLAGS += -DDEBUG -g
 endif
 
-# 编译目标：src目录下的所有.c文件
 CFILES = $(shell find ./ -name "*.c")
 OBJS = $(CFILES:.c=.o)
 LFILE = $(shell find ./ -name "*.l")
@@ -19,10 +17,10 @@ LFO = $(LFC:.c=.o)
 YFO = $(YFC:.c=.o)
 
 parser: syntax $(filter-out $(LFO),$(OBJS))
-	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -ly
+	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl $(CFLAGS)
 
 syntax: lexical syntax-c
-	$(CC) -c $(YFC) -o $(YFO)
+	$(CC) -c $(YFC) -o $(YFO) $(CFLAGS)
 
 lexical: $(LFILE)
 	$(FLEX) -o $(LFC) $(LFILE)
@@ -32,9 +30,9 @@ syntax-c: $(YFILE)
 
 -include $(patsubst %.o, %.d, $(OBJS))
 
-# 定义的一些伪目标
-.PHONY: clean test package clean-package
-test:
+
+.PHONY: clean test package clean-package mv
+test: parser
 	./parser ../Test/test1.cmm
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
@@ -43,12 +41,13 @@ clean:
 	rm -f *~
 
 
-PACKAGE := 谷石磊_211220079.zip
-PACKAGEDIR := Code
-PACKAGEFILES := README.md report.pdf
+PACKAGE := 211220079.zip
+PACKAGEDIR := Code Test
+PACKAGEFILES := README.md report.pdf parser
 
 package:
 	@echo "Creating package..."
+	@make && mv parser ../ && make clean
 	@cd .. && zip -r $(PACKAGE) $(PACKAGEDIR) $(PACKAGEFILES)
 	@echo "Package created: $(PACKAGE)"
 
@@ -56,3 +55,8 @@ clean-package:
 	@echo "Cleaning package..."
 	@cd .. && rm -f $(PACKAGE)
 	@echo "Package cleaned."
+
+mv: package
+	@echo "Moving package..."
+	@mv ../$(PACKAGE) /mnt/c/Users/砳砳/Desktop
+	@echo "Package moved."
