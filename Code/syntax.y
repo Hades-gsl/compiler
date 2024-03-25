@@ -1,14 +1,19 @@
 %{
 #define YYSTYPE MBTreeNode*
+#define YYDEBUG 1
 
 #include <stdio.h>
 #include "mbtree.h"
 #include "lex.yy.c"
 
+extern int error_line;
 extern MBTreeNode* root;
-extern void yyerror(const char *s);
 extern MBTreeNode* empty;
+void yyerror(const char* msg);
 %}
+
+%locations
+%define parse.error detailed
 
 %token INT     
 %token FLOAT   
@@ -64,7 +69,7 @@ ExtDecList : VarDec                             {$$ = newMBTreeNode(VAL_EMPTY, _
     | VarDec COMMA ExtDecList                   {$$ = newMBTreeNode(VAL_EMPTY, _ExtDecList, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);};
     ;
 Specifier : TYPE                                {$$ = newMBTreeNode(VAL_EMPTY, _Specifier, @$.first_line); addMBTreeNode($$, $1,NULL);}
-    | StructSpecifier                           {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $1, NULL);}
+    | StructSpecifier                           {$$ = newMBTreeNode(VAL_EMPTY, _Specifier, @$.first_line); addMBTreeNode($$, $1, NULL);}
     ;                 
 StructSpecifier : STRUCT OptTag LC DefList RC   {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
     | STRUCT Tag                                {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
@@ -98,16 +103,21 @@ Stmt : Exp SEMI                                 {$$ = newMBTreeNode(VAL_EMPTY, _
     | IF LP Exp RP Stmt ELSE Stmt               {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $7, $6, $5, $4, $3, $2, $1, NULL);}
     | WHILE LP Exp RP Stmt                      {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
     | error SEMI
+    | WHILE LP error Stmt
+    | IF LP error RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP error RP Stmt ELSE Stmt
+    | Exp error
     ;               
 DefList : Def DefList                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     |                                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, empty, NULL);}
     ;               
 Def : Specifier DecList SEMI                    {$$ = newMBTreeNode(VAL_EMPTY, _Def, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
+    | Specifier error SEMI
     ;             
 DecList : Dec                                   {$$ = newMBTreeNode(VAL_EMPTY, _DecList, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | Dec COMMA DecList                         {$$ = newMBTreeNode(VAL_EMPTY, _DecList, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     ;          
-Dec : VarDec                                    {$$ = newMBTreeNode(VAL_EMPTY, _VarDec, @$.first_line); addMBTreeNode($$, $1, NULL);}
+Dec : VarDec                                    {$$ = newMBTreeNode(VAL_EMPTY, _Dec, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | VarDec ASSIGNOP Exp                       {$$ = newMBTreeNode(VAL_EMPTY, _Dec, @$.first_line); addMBTreeNode($$, $3,$2, $1, NULL);}
     ;
 Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
@@ -129,9 +139,25 @@ Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _
     | INT                                       {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | FLOAT                                     {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | error RP
+    | error RB
+    | Exp ASSIGNOP error
+    | Exp PLUS error
+    | Exp MINUS error
+    | Exp STAR error
+    | Exp DIV error
+    | Exp RELOP error
+    | Exp AND error
+    | Exp OR error
     ;               
 Args : Exp COMMA Args                           {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Exp                                       {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $1, NULL);}
+    | error COMMA Args
     ;               
 
 %%
+
+void yyerror(const char* msg) {
+    if (error_line == yylineno) return;
+    printf("Error type B at Line %d: %s, near \"%s\".\n",yylineno, msg, yytext);
+    has_error = 1;
+}

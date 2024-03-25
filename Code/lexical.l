@@ -1,10 +1,14 @@
 %{
+#include <ctype.h>
 #include <stdio.h>
 
 #include "syntax.tab.h"
 #include "mbtree.h"
 
+int error_line = -1;
+
 extern int has_error;
+void print_error(const char *s);
 
 int yycolumn = 1;
 #define YY_USER_ACTION \
@@ -13,13 +17,17 @@ int yycolumn = 1;
     yylloc.last_column = yycolumn + yyleng - 1; \
     yycolumn += yyleng;
 
+#ifdef DEBUG
 #define YY_VAL(v, t)\
-    yylval = newMBTreeNode(v, _##t, yylineno)
+    yylval = newMBTreeNode(v, _##t, yylineno);\
+    printf("Line %d: %s\n", yylineno, yytext);\
+    displayMBTreeNode(yylval, 4);
+#else
+#define YY_VAL(v, t) yylval = newMBTreeNode(v, _##t, yylineno);
+#endif
 %}
 %option yylineno
 
-INT         0|([1-9][0-9]*)
-FLOAT       [0-9]+\.[0-9]+
 SEMI        ;
 COMMA       ,
 ASSIGNOP    =
@@ -44,13 +52,23 @@ RETURN      return
 IF          if
 ELSE        else
 WHILE       while
-ID          ([a-zA-Z]|_)([a-zA-Z]|_|[0-9])*
-WHITE       [\t\n ]
+
+COMMENT     ("//".*)|([/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]) 
+
+INT         0|([1-9][0-9]*)
+FLOAT       [0-9]+\.[0-9]+
+
+OCTAL       0[0-7]*
+HEX         0[xX][0-9a-fA-F]+
+EXPONENT    ({FLOAT}|(\.[0-9]+)|([0-9]+\.))[eE][+-]?[0-9]+
+
+ID          ([a-zA-Z_][a-zA-Z_0-9]*)|([a-zA-Z_0-9]*)
+WHITE       [\t\f\r\v ]
 
 %%
 
-{INT}       { YY_VAL(VAL_INT(yytext), INT); return INT; }
-{FLOAT}     { YY_VAL(VAL_FLOAT(yytext),FLOAT); return FLOAT; }
+{COMMENT}   ;
+[/][*]      { print_error("Comment not closed"); }
 {SEMI}      { YY_VAL(VAL_EMPTY, SEMI); return SEMI; }
 {COMMA}     { YY_VAL(VAL_EMPTY, COMMA); return COMMA; }
 {ASSIGNOP}  { YY_VAL(VAL_EMPTY, ASSIGNOP); return ASSIGNOP; }
@@ -75,13 +93,26 @@ WHITE       [\t\n ]
 {IF}        { YY_VAL(VAL_EMPTY, IF); return IF; }
 {ELSE}      { YY_VAL(VAL_EMPTY, ELSE); return ELSE; }
 {WHILE}     { YY_VAL(VAL_EMPTY, WHILE); return WHILE; }
-{ID}        { YY_VAL(val_str(yytext),ID); return ID; }
+{INT}       { YY_VAL(VAL_INT(yytext), INT); return INT; }
+{FLOAT}     { YY_VAL(VAL_FLOAT(yytext),FLOAT); return FLOAT; }
+{OCTAL}     { YY_VAL(VAL_INT(yytext), INT); print_error("Octal number is not supported"); return INT; }
+{HEX}       { YY_VAL(VAL_INT(yytext), INT); print_error("Hexadecimal number is not supported"); return INT; }
+{EXPONENT}  { YY_VAL(VAL_FLOAT(yytext),FLOAT); print_error("Exponential number is not supported"); return FLOAT; }
+{ID}        {   
+                if (isdigit(yytext[0])) {
+                    print_error("Identifier cannot start with a digit");
+                }
+                YY_VAL(val_str(yytext),ID); 
+                return ID; 
+            }
 \n          { yycolumn = 1; }
 {WHITE}     ;
-.           { 
-                // printf("A%d\n", yylineno);
-                printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext); 
-                has_error = 1; 
-            }
+.           { print_error("Unknown character"); }
 
 %%
+
+void print_error(const char *s) {
+    printf("Error type A at Line %d: %s: %s\n", yylineno, s, yytext);
+    has_error = 1;
+    error_line = yylineno;
+}
