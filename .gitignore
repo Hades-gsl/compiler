@@ -10,3 +10,5 @@ syntax.output
 parser
 
 .vscode/
+
+nju-compiler-test/
