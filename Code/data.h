@@ -134,11 +134,11 @@ struct FieldList {
   FieldList* next;
 };
 
-static void free_field_list(FieldList* fl) {
+static void freeFieldList(FieldList* fl) {
   if (fl) {
     free(fl->name);
     free(fl->type);
-    free_field_list(fl->next);
+    freeFieldList(fl->next);
     free(fl);
   }
 }
