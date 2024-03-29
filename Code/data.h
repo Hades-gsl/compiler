@@ -112,4 +112,35 @@ static Val val_str(const char* s) {
   }
 }
 
+typedef struct Type Type;
+typedef struct FieldList FieldList;
+
+struct Type {
+  enum { BASIC, ARRAY, STRUCTURE } kind;
+  union {
+    enum { INT_, FLOAT_ } basic;
+    struct {
+      Type* element;
+      int size;
+    } array;
+    FieldList* structure;
+  };
+};
+
+// the list of fields in a structure
+struct FieldList {
+  char* name;
+  Type* type;
+  FieldList* next;
+};
+
+static void free_field_list(FieldList* fl) {
+  if (fl) {
+    free(fl->name);
+    free(fl->type);
+    free_field_list(fl->next);
+    free(fl);
+  }
+}
+
 #endif  // DATA_H
