@@ -3,29 +3,29 @@
 
 #include "data.h"
 
-typedef struct hash_entry {
+typedef struct HashEntry {
   void *key;
   void *val;
-  struct hash_entry *next;
-} hash_entry;
+  struct HashEntry *next;
+} HashEntry;
 
-typedef struct ht_type {
-  unsigned int (*hash_function)(const void *key);
-  void *(*key_dup)(void *privdata, const void *key);
-  void *(*val_dup)(void *privdata, const void *obj);
-  int (*key_compare)(void *privdata, const void *key1, const void *key2);
-  void (*key_destructor)(void *privdata, void *key);
-  void (*val_destructor)(void *privdata, void *obj);
-} ht_type;
+typedef struct HtType {
+  unsigned int (*hashFunction)(const void *key);
+  void *(*keyDup)(void *privdata, const void *key);
+  void *(*valDup)(void *privdata, const void *obj);
+  int (*keyCompare)(void *privdata, const void *key1, const void *key2);
+  void (*keyDestructor)(void *privdata, void *key);
+  void (*valDestructor)(void *privdata, void *obj);
+} HtType;
 
-typedef struct hash_table {
-  ht_type *type;
+typedef struct HashTable {
+  HtType *type;
   unsigned size;
   unsigned mask;
   unsigned used;
-  hash_entry **table;
+  HashEntry **table;
   void *privdata;
-} hash_table;
+} HashTable;
 
 /* This is the initial size of every hash table */
 #define HT_INITIAL_SIZE 4
@@ -38,35 +38,35 @@ typedef struct hash_table {
 
 /* ------------------------------- Macros ------------------------------------*/
 #define htFreeEntryVal(ht, entry) \
-  if ((ht)->type->val_destructor) \
-  (ht)->type->val_destructor((ht)->privdata, (entry)->val)
+  if ((ht)->type->valDestructor)  \
+  (ht)->type->valDestructor((ht)->privdata, (entry)->val)
 
-#define htSetHashVal(ht, entry, _val_)                         \
-  do {                                                         \
-    if ((ht)->type->val_dup)                                   \
-      entry->val = (ht)->type->val_dup((ht)->privdata, _val_); \
-    else                                                       \
-      entry->val = (_val_);                                    \
+#define htSetHashVal(ht, entry, _val_)                        \
+  do {                                                        \
+    if ((ht)->type->valDup)                                   \
+      entry->val = (ht)->type->valDup((ht)->privdata, _val_); \
+    else                                                      \
+      entry->val = (_val_);                                   \
   } while (0)
 
 #define htFreeEntryKey(ht, entry) \
-  if ((ht)->type->key_destructor) \
-  (ht)->type->key_destructor((ht)->privdata, (entry)->key)
+  if ((ht)->type->keyDestructor)  \
+  (ht)->type->keyDestructor((ht)->privdata, (entry)->key)
 
-#define htSetHashKey(ht, entry, _key_)                         \
-  do {                                                         \
-    if ((ht)->type->key_dup)                                   \
-      entry->key = (ht)->type->key_dup((ht)->privdata, _key_); \
-    else                                                       \
-      entry->key = (_key_);                                    \
+#define htSetHashKey(ht, entry, _key_)                        \
+  do {                                                        \
+    if ((ht)->type->keyDup)                                   \
+      entry->key = (ht)->type->keyDup((ht)->privdata, _key_); \
+    else                                                      \
+      entry->key = (_key_);                                   \
   } while (0)
 
-#define htCompareHashKeys(ht, key1, key2)                    \
-  (((ht)->type->key_compare)                                 \
-       ? (ht)->type->key_compare((ht)->privdata, key1, key2) \
+#define htCompareHashKeys(ht, key1, key2)                   \
+  (((ht)->type->keyCompare)                                 \
+       ? (ht)->type->keyCompare((ht)->privdata, key1, key2) \
        : (key1) == (key2))
 
-#define htHashKey(ht, key) (ht)->type->hash_function(key)
+#define htHashKey(ht, key) (ht)->type->hashFunction(key)
 
 #define htGetEntryKey(he) ((he)->key)
 #define htGetEntryVal(he) ((he)->val)
@@ -74,13 +74,13 @@ typedef struct hash_table {
 #define htSize(ht) ((ht)->used)
 
 /* API */
-static unsigned int ht_gen_hash_function(const char *str);
-static hash_table *ht_create(ht_type *type, void *privdata_ptr);
-static int ht_expand(hash_table *ht, unsigned long size);
-static int ht_add(hash_table *ht, void *key, void *val);
-static int ht_replace(hash_table *ht, void *key, void *val);
-static int ht_delete(hash_table *ht, const void *key);
-static void ht_release(hash_table *ht);
-static hash_entry *ht_find(hash_table *ht, const void *key);
+unsigned int htGenHashFunction(const char *str);
+HashTable *htCreate(HtType *type, void *privDataPtr);
+int htExpand(HashTable *ht, unsigned long size);
+int htAdd(HashTable *ht, void *key, void *val);
+int htReplace(HashTable *ht, void *key, void *val);
+int htDelete(HashTable *ht, const void *key);
+void htRelease(HashTable *ht);
+HashEntry *htFind(HashTable *ht, const void *key);
 
 #endif  // HASH_H
