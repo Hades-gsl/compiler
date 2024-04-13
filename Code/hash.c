@@ -32,30 +32,31 @@ HashTable *htCreate(HtType *type, void *privDataPtr) {
 
 /* Expand the hash table */
 int htExpand(HashTable *ht, unsigned long size) {
-  HashTable *new_ht = malloc(sizeof(HashTable)); /* new hash table */
-  if (!new_ht) return HT_ERR;
+  HashTable new_ht; /* new hash table */
 
-  _htInit(new_ht, ht->type, ht->privdata);
-  new_ht->size = _htNextPower(size);
-  new_ht->mask = new_ht->size - 1;
-  new_ht->used = ht->used;
-  new_ht->table = calloc(new_ht->size, sizeof(HashEntry *));
-  if (!new_ht->table) {
-    free(new_ht);
+  unsigned long realsize = _htNextPower(size);
+  if (ht->used > size) return HT_ERR;
+
+  _htInit(&new_ht, ht->type, ht->privdata);
+  new_ht.size = realsize;
+  new_ht.mask = realsize - 1;
+  new_ht.used = ht->used;
+  new_ht.table = calloc(realsize, sizeof(HashEntry *));
+  if (!new_ht.table) {
     return HT_ERR;
   }
 
   /* Copy all the elements from the old to the new table:
    * note that if the old hash table is empty ht->size is zero,
    * so ht_xpand just creates an hash table. */
-  for (unsigned long i = 0; i < ht->size; i++) {
+  for (unsigned long i = 0; i < ht->size && ht->used > 0; i++) {
     HashEntry *entry = ht->table[i];
     while (entry) {
       HashEntry *next = entry->next;
 
-      unsigned long index = htHashKey(ht, entry->key) & new_ht->mask;
-      entry->next = new_ht->table[index];
-      new_ht->table[index] = entry;
+      unsigned long index = htHashKey(ht, entry->key) & new_ht.mask;
+      entry->next = new_ht.table[index];
+      new_ht.table[index] = entry;
       ht->used--;
 
       entry = next;
@@ -66,7 +67,8 @@ int htExpand(HashTable *ht, unsigned long size) {
   free(ht->table);
   free(ht);
 
-  ht = new_ht;
+  /* Remap the new hashtable in the old */
+  *ht = new_ht;
 
   return HT_OK;
 }
@@ -111,9 +113,9 @@ int htReplace(HashTable *ht, void *key, void *val) {
    * as the previous one. In this context, think to reference counting,
    * you want to increment (set), and then decrement (free), and not the
    * reverse. */
-  void *old_val = entry->val;
+  HashEntry old = *entry;
   htSetHashVal(ht, entry, val);
-  htFreeEntryVal(ht, entry);
+  htFreeEntryVal(ht, &old);
 
   return 0;
 }
@@ -186,7 +188,7 @@ static unsigned long _htNextPower(unsigned long size) {
  * If the key already exists, -1 is returned. */
 static unsigned long _htGetIndex(HashTable *ht, const void *key) {
   if (ht->used >= ht->size) {
-    if (!htExpand(ht, ht->size * 2)) return -1;
+    if (htExpand(ht, ht->size * 2) == HT_ERR) return -1;
   }
 
   unsigned long index = htHashKey(ht, key) & ht->mask;
