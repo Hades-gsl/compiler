@@ -5,6 +5,8 @@
 #include "syntax.tab.h"
 #include "mbtree.h"
 
+extern int fileno(FILE *);
+
 int error_line = -1;
 
 extern int has_error;
@@ -17,7 +19,7 @@ int yycolumn = 1;
     yylloc.last_column = yycolumn + yyleng - 1; \
     yycolumn += yyleng;
 
-#ifdef DEBUG
+#ifdef DEBUG_LEXICAL
 #define YY_VAL(v, t)\
     yylval = newMBTreeNode(v, _##t, yylineno);\
     printf("Line %d: %s\n", yylineno, yytext);\
