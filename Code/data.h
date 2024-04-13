@@ -96,31 +96,15 @@ typedef struct {
   unsigned int lineno;
 } Data;  //* AST_Node 节点词法单元名、属性值、行号 *//
 
+Val val_str(const char* s);
+
 static inline int is_non_terminal(const Node_type type) {
   return type >= _Program && type < _Empty;
-}
-
-static Val val_str(const char* s) {
-  size_t len = strlen(s) + 1;  // +1 for the null terminator
-  char* cp = malloc(len);      // Allocate memory for the string
-  if (cp) {
-    strncpy(cp, s, len);  // Copy the string, including the null terminator
-    return (Val){.val_str = cp};
-  } else {
-    // Handle memory allocation failure
-    assert(0);
-    return (Val){.val_str = NULL};
-  }
 }
 
 /*-----------------------------semantic analysis-----------------------------*/
 typedef struct Type Type;
 typedef struct FieldList FieldList;
-
-static void freeType(Type* t);
-static void freeFieldList(FieldList* fl);
-static int typeEqual(Type* a, Type* b);
-static int fieldListEqual(FieldList* a, FieldList* b);
 
 // the type of a symbol
 struct Type {
@@ -145,74 +129,6 @@ struct Type {
   };
 };
 
-static inline Type* newTypeBasic(int basic) {
-  Type* t = malloc(sizeof(Type));
-  *t = (Type){.kind = BASIC, .basic = basic};
-  return t;
-}
-
-static inline Type* newTypeStructure(char* name, FieldList* structure) {
-  Type* t = malloc(sizeof(Type));
-  *t = (Type){.kind = STRUCTURE,
-              .structure.name = name,
-              .structure.structure = structure};
-  return t;
-}
-
-static inline Type* newTypeArray(Type* element, int size) {
-  Type* t = malloc(sizeof(Type));
-  *t = (Type){.kind = ARRAY, .array.element = element, .array.size = size};
-  return t;
-}
-
-static inline Type* newTypeFunction(Type* returnType, FieldList* params) {
-  Type* t = malloc(sizeof(Type));
-  *t = (Type){.kind = FUNCTION,
-              .function.returnType = returnType,
-              .function.params = params};
-  return t;
-}
-
-static int typeEqual(Type* a, Type* b) {
-  /*If either 'a' or 'b' is NULL, it indicates an error such as an undefined
-   * struct 'a'. To prevent cascading errors, we treat the comparison as equal
-   * and return 1.*/
-  if (a == NULL || b == NULL) {
-    return 1;
-  } else if (a->kind != b->kind) {
-    return 0;
-  } else {
-    switch (a->kind) {
-      case BASIC:
-        return a->basic == b->basic;
-      case ARRAY:
-        return a->array.size == b->array.size &&
-               typeEqual(a->array.element, b->array.element);
-      case STRUCTURE:
-        return fieldListEqual(a->structure.structure, b->structure.structure);
-      case FUNCTION:
-        return typeEqual(a->function.returnType, b->function.returnType) &&
-               fieldListEqual(a->function.params, b->function.params);
-    }
-  }
-}
-
-static void freeType(Type* t) {
-  if (t) {
-    if (t->kind == ARRAY) {
-      freeType(t->array.element);
-    } else if (t->kind == STRUCTURE) {
-      free(t->structure.name);
-      freeFieldList(t->structure.structure);
-    } else if (t->kind == FUNCTION) {
-      freeType(t->function.returnType);
-      freeFieldList(t->function.params);
-    }
-
-    free(t);
-  }
-}
-
 // the list of fields in a structure or the list of parameters in a function
 struct FieldList {
   char* name;
@@ -220,70 +136,71 @@ struct FieldList {
   FieldList* next;
 };
 
-static inline FieldList* newFieldList(char* name, Type* type, FieldList* next) {
-  FieldList* fl = malloc(sizeof(FieldList));
-  *fl = (FieldList){.name = name, .type = type, .next = next};
-  return fl;
-}
+void freeType(Type* t);
+void freeFieldList(FieldList* fl);
 
-static int fieldListEqual(FieldList* a, FieldList* b) {
-  if (a == NULL && b == NULL) {
-    return 1;
-  } else if (a == NULL || b == NULL) {
-    return 0;
-  } else {
-    return typeEqual(a->type, b->type) && fieldListEqual(a->next, b->next);
-  }
-}
+int typeEqual(Type* a, Type* b);
+int fieldListEqual(FieldList* a, FieldList* b);
 
-static void freeFieldList(FieldList* fl) {
-  if (fl) {
-    free(fl->name);
-    freeType(fl->type);
-    freeFieldList(fl->next);
-    free(fl);
-  }
-}
+Type* newTypeBasic(int basic);
+Type* newTypeStructure(char* name, FieldList* structure);
+Type* newTypeArray(Type* element, int size);
+Type* newTypeFunction(Type* returnType, FieldList* params);
+FieldList* newFieldList(char* name, Type* type, FieldList* next);
+
+Type* copyTypeBasic(Type* t);
+Type* copyTypeStructure(Type* t);
+Type* copyTypeArray(Type* t);
+Type* copyTypeFunction(Type* t);
+FieldList* copyFieldList(FieldList* fl);
+
+// function pointers for copying types
+static Type* (*copyType[])(Type*) = {copyTypeBasic, copyTypeArray,
+                                     copyTypeStructure, copyTypeFunction};
 
 // Define error types
 typedef enum {
-  UND_VAR = 1,    // Undefined Variable
-  UND_FUNC,       // Undefined Function
-  RED_VAR,        // Redefined Variable
-  RED_FUNC,       // Redefined Function
-  TYP_MIS_ASS,    // Type Mismatch in Assignment
-  LVAL_REQ,       // Lvalue Required
-  OP_MIS,         // Operand Mismatch
-  RET_TYP_MIS,    // Return Type Mismatch
-  PAR_MIS,        // Parameter Mismatch
-  NON_ARR_SUB,    // Non-Array Subscript
-  NON_FUNC_CALL,  // Non-Function Call
-  NON_INT_SUB,    // Non-Integer Subscript
-  NON_STR_MEM,    // Non-Structure Member
-  UND_STR_MEM,    // Undefined Structure Member
-  RED_STR_MEM,    // Redefined Structure Member
-  NAME_CON,       // Name Conflict
-  UND_STR         // Undefined Structure
+  UND_VAR = 1,          // Undefined Variable
+  UND_FUNC,             // Undefined Function
+  RED_VAR,              // Redefined Variable
+  RED_FUNC,             // Redefined Function
+  TYP_MIS_ASS,          // Type Mismatch in Assignment
+  LVAL_REQ,             // Lvalue Required
+  OP_MIS,               // Operand Mismatch
+  RET_TYP_MIS,          // Return Type Mismatch
+  PAR_MIS,              // Parameter Mismatch
+  NON_ARR_SUB,          // Non-Array Subscript
+  NON_FUNC_CALL,        // Non-Function Call
+  NON_INT_SUB,          // Non-Integer Subscript
+  NON_STR_MEM,          // Non-Structure Member
+  UND_STR_MEM,          // Undefined Structure Member
+  RED_STR_MEM_OR_INIT,  // Redefined Structure Member
+  STR_NAME_CON,         // Name Conflict
+  UND_STR               // Undefined Structure
 } ErrorType;
 
 // Error message array
-const char* error_msg[] = {NULL,  // Placeholder for index 0, no error message
-                           "Undeclared variable.",
-                           "Undefined function.",
-                           "Redefinition of variable or struct name conflict.",
-                           "Redefinition of function.",
-                           "Type mismatch in assignment.",
-                           "Lvalue required.",
-                           "Operand type mismatch.",
-                           "Return type mismatch.",
-                           "Parameter mismatch.",
-                           "Non-array subscript used.",
-                           "Non-function call attempt.",
-                           "Non-integer array subscript.",
-                           "Non-structure member access.",
-                           "Undefined structure member access.",
-                           "Redefined structure member.",
-                           "Name conflict with struct or variable.",
-                           "Undefined structure usage."};
+static const char* error_msg[] = {
+    NULL,  // Placeholder for index 0, no error message
+    "Variable used without being defined.",
+    "Function called without being defined.",
+    "Variable redefined or has the same name as a previously defined "
+    "structure.",
+    "Function redefined (i.e., the same function name defined more than once).",
+    "Type mismatch in assignment expression.",
+    "Lvalue required as left operand of assignment.",
+    "Operand type mismatch or operand type does not match the operator.",
+    "Return statement type does not match the function's defined return type.",
+    "Number or type of arguments does not match the function's parameters.",
+    "Subscript operator used with a non-array variable.",
+    "Function call operator used with a non-function variable.",
+    "Non-integer subscript in array access operator.",
+    "Member access operator used with a non-structure variable.",
+    "Access to an undefined structure member.",
+    "Structure member redefined within the same structure or initialized at "
+    "definition.",
+    "Structure name conflicts with a previously defined structure or variable "
+    "name.",
+    "Undefined structure used to define a variable."};
 
 #endif  // DATA_H
