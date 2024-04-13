@@ -8,7 +8,6 @@
 
 extern int error_line;
 extern MBTreeNode* root;
-extern MBTreeNode* empty;
 void yyerror(const char* msg);
 %}
 
@@ -59,7 +58,7 @@ void yyerror(const char* msg);
 Program : ExtDefList                            {$$ = newMBTreeNode(VAL_EMPTY, _Program, @$.first_line); addMBTreeNode($$, $1, NULL); root = $$;}
     ;
 ExtDefList : ExtDef ExtDefList                  {$$ = newMBTreeNode(VAL_EMPTY, _ExtDefList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
-    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _ExtDefList, @$.first_line); addMBTreeNode($$, empty, NULL);}
+    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _ExtDefList, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
     ;
 ExtDef : Specifier ExtDecList SEMI              {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Specifier SEMI                            {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
@@ -75,7 +74,7 @@ StructSpecifier : STRUCT OptTag LC DefList RC   {$$ = newMBTreeNode(VAL_EMPTY, _
     | STRUCT Tag                                {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     ;             
 OptTag : ID                                     {$$ = newMBTreeNode(VAL_EMPTY, _OptTag, @$.first_line); addMBTreeNode($$, $1, NULL);}
-    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _OptTag, @$.first_line); addMBTreeNode($$, empty, NULL);}
+    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _OptTag, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
     ;               
 Tag : ID                                        {$$ = newMBTreeNode(VAL_EMPTY, _Tag, @$.first_line); addMBTreeNode($$, $1, NULL);}
     ;
@@ -94,7 +93,7 @@ CompSt : LC DefList StmtList RC                 {$$ = newMBTreeNode(VAL_EMPTY, _
     | error RC
     ;               
 StmtList : Stmt StmtList                        {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
-    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, empty, NULL);}
+    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
     ;               
 Stmt : Exp SEMI                                 {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     | CompSt                                    {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $1, NULL);}
@@ -109,7 +108,7 @@ Stmt : Exp SEMI                                 {$$ = newMBTreeNode(VAL_EMPTY, _
     | Exp error
     ;               
 DefList : Def DefList                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
-    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, empty, NULL);}
+    |                                           {$$ = newMBTreeNode(VAL_EMPTY, _DefList, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
     ;               
 Def : Specifier DecList SEMI                    {$$ = newMBTreeNode(VAL_EMPTY, _Def, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Specifier error SEMI
