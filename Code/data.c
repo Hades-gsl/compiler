@@ -55,9 +55,10 @@ int typeEqual(Type* a, Type* b) {
     switch (a->kind) {
       case BASIC:
         return a->basic == b->basic;
+        // we don't need to compare the size of the array
       case ARRAY:
-        return a->array.size == b->array.size &&
-               typeEqual(a->array.element, b->array.element);
+        return typeEqual(a->array.element, b->array.element);
+        // we don't need to compare the name of the structure
       case STRUCTURE:
         return fieldListEqual(a->structure.structure, b->structure.structure);
       case FUNCTION:
