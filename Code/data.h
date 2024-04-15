@@ -6,6 +6,7 @@
 #include <string.h>
 
 /*-------------------lexical analysis and syntax analysis-------------------*/
+// the type of a node
 typedef enum {
   _INT,
   _FLOAT,
@@ -56,7 +57,7 @@ typedef enum {
   _Exp,
   _Args,
   _Empty,
-} Node_type;  //* 枚举抽象语法树节点类型 *//
+} Node_type;
 
 const static char* type_strs[] = {
     "INT",        "FLOAT",      "ID",
@@ -77,11 +78,12 @@ const static char* type_strs[] = {
     "Dec",        "Exp",        "Args",
 };
 
+// the value of a node
 typedef union {
   int val_int;
   float val_float;
   char* val_str;
-} Val;  //* 联合类型 整、浮、字符串指针 *//
+} Val;
 
 #define VAL_EMPTY \
   (Val) { .val_str = NULL }
@@ -90,11 +92,12 @@ typedef union {
 #define VAL_FLOAT(x) \
   (Val) { .val_float = atof(x) }
 
+// the data structure of a node
 typedef struct {
   Node_type type;
   Val value;
   unsigned int lineno;
-} Data;  //* AST_Node 节点词法单元名、属性值、行号 *//
+} Data;
 
 Val val_str(const char* s);
 
