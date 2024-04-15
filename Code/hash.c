@@ -65,7 +65,6 @@ int htExpand(HashTable *ht, unsigned long size) {
 
   assert(ht->used == 0);
   free(ht->table);
-  free(ht);
 
   /* Remap the new hashtable in the old */
   *ht = new_ht;
