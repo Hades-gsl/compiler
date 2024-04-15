@@ -7,6 +7,10 @@ ifdef ENABLE_DEBUG
     CFLAGS += -DDEBUG -g
 endif
 
+ifdef MEM_CHECK
+	CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+endif
+
 CFILES = $(shell find ./ -name "*.c")
 OBJS = $(CFILES:.c=.o)
 LFILE = $(shell find ./ -name "*.l")
