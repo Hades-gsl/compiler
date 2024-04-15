@@ -63,6 +63,7 @@ ExtDefList : ExtDef ExtDefList                  {$$ = newMBTreeNode(VAL_EMPTY, _
 ExtDef : Specifier ExtDecList SEMI              {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Specifier SEMI                            {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     | Specifier FunDec CompSt                   {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
+    | Specifier FunDec error
     ;
 ExtDecList : VarDec                             {$$ = newMBTreeNode(VAL_EMPTY, _ExtDecList, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | VarDec COMMA ExtDecList                   {$$ = newMBTreeNode(VAL_EMPTY, _ExtDecList, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);};
@@ -102,7 +103,8 @@ Stmt : Exp SEMI                                 {$$ = newMBTreeNode(VAL_EMPTY, _
     | IF LP Exp RP Stmt ELSE Stmt               {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $7, $6, $5, $4, $3, $2, $1, NULL);}
     | WHILE LP Exp RP Stmt                      {$$ = newMBTreeNode(VAL_EMPTY, _Stmt, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
     | error SEMI
-    | WHILE LP error Stmt
+    | error Stmt
+    | WHILE LP error RP Stmt
     | IF LP error RP Stmt %prec LOWER_THAN_ELSE
     | IF LP error RP Stmt ELSE Stmt
     | Exp error

@@ -313,13 +313,6 @@ static FieldList* saDec(MBTreeNode* node, Type* type) {
 
   MBTreeNode* child = node->firstChild;  // VarDec
   FieldList* varDec = saVarDec(child, type);
-  if (htReplace(ht, varDec->name, varDec->type) == 0) {
-    if (structDep > 0) {
-      print_error_massage(RED_STR_MEM_OR_INIT, node->data->lineno);
-    } else {
-      print_error_massage(RED_VAR, node->data->lineno);
-    }
-  }
 
   child = child->nextSibling;
   if (child == NULL) {
@@ -339,6 +332,18 @@ static FieldList* saDec(MBTreeNode* node, Type* type) {
     // error
     assert(0);
   }
+
+  // To prevent erroneous reports, such as ‘float a; int a = a + 0.1’, we defer
+  // adding the symbol to the symbol table after the right expression has been
+  // processed.
+  if (htReplace(ht, varDec->name, varDec->type) == 0) {
+    if (structDep > 0) {
+      print_error_massage(RED_STR_MEM_OR_INIT, node->data->lineno);
+    } else {
+      print_error_massage(RED_VAR, node->data->lineno);
+    }
+  }
+
   return varDec;
 }
 
@@ -369,16 +374,16 @@ static FieldList* saVarDec(MBTreeNode* node, Type* type) {
     // type.
     Type* array = newTypeArray(NULL, size);
     Type* p = fl->type;
-    // If the current type is a basic type, the new array type becomes the
+    // If the current type is not a array type, the new array type becomes the
     // outermost type.
-    if (p->kind == BASIC) {
+    if (p == NULL || p->kind != ARRAY) {
       array->array.element = p;
       fl->type = array;
     } else {
       // Traverse the type hierarchy to find the type that is immediately before
       // the basic type. Insert the new array type as the element of this type,
       // making it the second-to-last type.
-      while (p->array.element->kind != BASIC) {
+      while (p->array.element->kind == ARRAY) {
         p = p->array.element;
       }
       array->array.element = p->array.element;
@@ -420,7 +425,7 @@ static void saFunDec(MBTreeNode* node, Type* type) {
   child = child->nextSibling;
   if (child->data->type == _VarList) {
     // FunDec -> ID LP VarList RP
-    type->function.params = saVarList(child);
+    function->function.params = saVarList(child);
 
     assert(child->nextSibling->data->type == _RP);
   } else if (child->data->type == _RP) {
@@ -577,7 +582,9 @@ static void saStmt(MBTreeNode* node) {
 
       child = child->nextSibling;  // Exp
       Type* t = saExp(child, NOT_LVALUE);
-      assert(t->kind == BASIC && t->basic == BASIC_TYPE_INT);
+      if (t != NULL && (t->kind != BASIC || t->basic != BASIC_TYPE_INT)) {
+        print_error_massage(OP_MIS, node->data->lineno);
+      }
 
       child = child->nextSibling;  // RP
       assert(child->data->type == _RP);
@@ -607,7 +614,11 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
       child = child->nextSibling;
       if (child->data->type == _DOT) {
         // Exp -> Exp DOT ID
-        if (t1 == NULL || t1->kind != STRUCTURE) {
+        if (t1 == NULL) {
+          break;
+        }
+
+        if (t1->kind != STRUCTURE) {
           print_error_massage(NON_STR_MEM, node->data->lineno);
           break;
         }
@@ -662,8 +673,11 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
             print_error_massage(OP_MIS, node->data->lineno);
           }
         }
-
-        type = t1;
+        if (child->data->type == _RELOP) {
+          type = newTypeBasic(BASIC_TYPE_INT);
+        } else {
+          type = t1;
+        }
       }
 
       break;
@@ -705,16 +719,16 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
 
         Type* t = htGetEntryVal(he);
 
+        if (t == NULL || t->kind != FUNCTION) {
+          print_error_massage(NON_FUNC_CALL, node->data->lineno);
+          break;
+        }
+
         assert(child->data->type == _LP);
         child = child->nextSibling;
         if (child->data->type == _Args) {
           // Exp -> ID LP Args RP
           FieldList* fl = saArgs(child);
-
-          if (t == NULL || t->kind != FUNCTION) {
-            print_error_massage(NON_FUNC_CALL, node->data->lineno);
-            break;
-          }
 
           if (!fieldListEqual(t->function.params, fl)) {
             print_error_massage(PAR_MIS, node->data->lineno);
@@ -730,6 +744,8 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
           // error
           assert(0);
         }
+
+        type = t->function.returnType;
       } else {
         HashEntry* he = htFind(ht, name);
         if (he == NULL) {
@@ -793,7 +809,11 @@ static void saExtDecList(MBTreeNode* node, Type* type) {
   assert(node->data->type == _ExtDecList);
 
   MBTreeNode* child = node->firstChild;  // VarDec
-  saVarDec(child, type);
+  FieldList* fl = saVarDec(child, type);
+
+  if (htReplace(ht, fl->name, fl->type) == 0) {
+    print_error_massage(RED_VAR, node->data->lineno);
+  }
 
   MBTreeNode* next = child->nextSibling;
   if (next == NULL) {
