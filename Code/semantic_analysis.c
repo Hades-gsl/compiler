@@ -101,6 +101,8 @@ static void saExtDef(MBTreeNode* node) {
       // error
       assert(0);
   }
+
+  freeType(type);
 }
 
 // analyse the Specifier node
@@ -182,6 +184,7 @@ static Type* saStructSpecifier(MBTreeNode* node) {
       }
     }
 
+    freeFieldList(fl);
   } else if (child->data->type == _Tag) {
     // StructSpecifier -> STRUCT Tag
     char* tag = saTag(child);
@@ -190,6 +193,7 @@ static Type* saStructSpecifier(MBTreeNode* node) {
       print_error_massage(UND_STR, node->data->lineno);
     } else {
       type = htGetEntryVal(he);
+      type = copyType[type->kind](type);
     }
   } else {
     // error
@@ -231,10 +235,7 @@ static char* saID(MBTreeNode* node) {
 
   assert(node->data->type == _ID);
 
-  char* name = malloc(strlen(node->data->value.val_str) + 1);
-  strcpy(name, node->data->value.val_str);
-
-  return name;
+  return node->data->value.val_str;
 }
 
 // analyse the DefList node
@@ -277,7 +278,11 @@ static FieldList* saDef(MBTreeNode* node) {
 
   assert(decList->nextSibling->data->type == _SEMI);
 
-  return saDecList(decList, type);
+  FieldList* fl = saDecList(decList, type);
+
+  freeType(type);
+
+  return fl;
 }
 
 // analyse the DecList node
@@ -438,6 +443,8 @@ static void saFunDec(MBTreeNode* node, Type* type) {
   if (htReplace(ht, name, function) == 0) {
     print_error_massage(RED_FUNC, node->data->lineno);
   }
+
+  freeType(function);
 }
 
 // analyse the VarList node
@@ -481,6 +488,8 @@ static FieldList* saParamDec(MBTreeNode* node) {
     print_error_massage(RED_VAR, node->data->lineno);
   }
 
+  freeType(type);
+
   return fl;
 }
 
@@ -495,7 +504,7 @@ static void saCompSt(MBTreeNode* node) {
 
   // CompSt -> LC DefList StmtList RC
   child = child->nextSibling;  // DefList
-  saDefList(child);
+  freeFieldList(saDefList(child));
 
   child = child->nextSibling;  // StmtList
   saStmtList(child);
@@ -609,7 +618,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
 
   MBTreeNode* child = node->firstChild;
   switch (child->data->type) {
-    case _Exp:
+    case _Exp: {
       Type* t1 = saExp(child, NOT_LVALUE);
       child = child->nextSibling;
       if (child->data->type == _DOT) {
@@ -681,6 +690,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
       }
 
       break;
+    }
     case _LP:
       // Exp -> LP Exp RP
       child = child->nextSibling;
@@ -703,7 +713,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
         print_error_massage(OP_MIS, node->data->lineno);
       }
       break;
-    case _ID:
+    case _ID: {
       // Exp -> ID LP Args RP
       // Exp -> ID LP RP
       // Exp -> ID
@@ -734,6 +744,8 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
             print_error_massage(PAR_MIS, node->data->lineno);
           }
 
+          freeFieldList(fl);
+
           assert(child->nextSibling->data->type == _RP);
         } else if (child->data->type == _RP) {
           // Exp -> ID LP RP
@@ -757,6 +769,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
         goto ret;
       }
       break;
+    }
     case _INT:
       // Exp -> INT
       type = newTypeBasic(BASIC_TYPE_INT);
@@ -825,6 +838,8 @@ static void saExtDecList(MBTreeNode* node, Type* type) {
     // error
     assert(0);
   }
+
+  freeFieldList(fl);
 }
 
 static void print_error_massage(int code, int line) {
