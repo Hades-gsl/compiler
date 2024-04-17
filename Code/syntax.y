@@ -63,16 +63,20 @@ ExtDefList : ExtDef ExtDefList                  {$$ = newMBTreeNode(VAL_EMPTY, _
 ExtDef : Specifier ExtDecList SEMI              {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Specifier SEMI                            {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     | Specifier FunDec CompSt                   {$$ = newMBTreeNode(VAL_EMPTY, _ExtDef, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
-    | Specifier FunDec error
+    | error SEMI
+    | Specifier error SEMI
+    | error Specifier SEMI
     ;
 ExtDecList : VarDec                             {$$ = newMBTreeNode(VAL_EMPTY, _ExtDecList, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | VarDec COMMA ExtDecList                   {$$ = newMBTreeNode(VAL_EMPTY, _ExtDecList, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);};
+    | VarDec error ExtDefList
     ;
 Specifier : TYPE                                {$$ = newMBTreeNode(VAL_EMPTY, _Specifier, @$.first_line); addMBTreeNode($$, $1,NULL);}
     | StructSpecifier                           {$$ = newMBTreeNode(VAL_EMPTY, _Specifier, @$.first_line); addMBTreeNode($$, $1, NULL);}
     ;                 
 StructSpecifier : STRUCT OptTag LC DefList RC   {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $5, $4, $3, $2, $1, NULL);}
     | STRUCT Tag                                {$$ = newMBTreeNode(VAL_EMPTY, _StructSpecifier, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
+    | STRUCT OptTag LC DefList error RC
     ;             
 OptTag : ID                                     {$$ = newMBTreeNode(VAL_EMPTY, _OptTag, @$.first_line); addMBTreeNode($$, $1, NULL);}
     |                                           {$$ = newMBTreeNode(VAL_EMPTY, _OptTag, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
@@ -81,9 +85,12 @@ Tag : ID                                        {$$ = newMBTreeNode(VAL_EMPTY, _
     ;
 VarDec : ID                                     {$$ = newMBTreeNode(VAL_EMPTY, _VarDec, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | VarDec LB INT RB                          {$$ = newMBTreeNode(VAL_EMPTY, _VarDec, @$.first_line); addMBTreeNode($$,$4,$3,$2,$1, NULL); }
+    | VarDec LB error RB
     ;               
 FunDec : ID LP VarList RP                       {$$ = newMBTreeNode(VAL_EMPTY, _FunDec, @$.first_line); addMBTreeNode($$, $4,$3,$2,$1, NULL);}
     | ID LP RP                                  {$$ = newMBTreeNode(VAL_EMPTY, _FunDec, @$.first_line); addMBTreeNode($$, $3,$2,$1, NULL);}
+    | ID LP error RP
+    | error LP VarList RP
     ;    
 VarList : ParamDec COMMA VarList                {$$ = newMBTreeNode(VAL_EMPTY, _VarList, @$.first_line); addMBTreeNode($$, $3,$2, $1, NULL);}
     | ParamDec                                  {$$ = newMBTreeNode(VAL_EMPTY, _VarList, @$.first_line); addMBTreeNode($$, $1, NULL);}
@@ -91,7 +98,6 @@ VarList : ParamDec COMMA VarList                {$$ = newMBTreeNode(VAL_EMPTY, _
 ParamDec : Specifier VarDec                     {$$ = newMBTreeNode(VAL_EMPTY, _ParamDec, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     ; 
 CompSt : LC DefList StmtList RC                 {$$ = newMBTreeNode(VAL_EMPTY, _CompSt, @$.first_line); addMBTreeNode($$, $4, $3, $2, $1, NULL);}
-    | error RC
     ;               
 StmtList : Stmt StmtList                        {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, $2, $1, NULL);}
     |                                           {$$ = newMBTreeNode(VAL_EMPTY, _StmtList, @$.first_line); addMBTreeNode($$, newMBTreeNode(VAL_EMPTY, _Empty, -1), NULL);}
@@ -114,6 +120,7 @@ DefList : Def DefList                           {$$ = newMBTreeNode(VAL_EMPTY, _
     ;               
 Def : Specifier DecList SEMI                    {$$ = newMBTreeNode(VAL_EMPTY, _Def, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Specifier error SEMI
+    | Specifier DecList error
     ;             
 DecList : Dec                                   {$$ = newMBTreeNode(VAL_EMPTY, _DecList, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | Dec COMMA DecList                         {$$ = newMBTreeNode(VAL_EMPTY, _DecList, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
@@ -139,8 +146,6 @@ Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _
     | ID                                        {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | INT                                       {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
     | FLOAT                                     {$$ = newMBTreeNode(VAL_EMPTY, _Exp, @$.first_line); addMBTreeNode($$, $1, NULL);}
-    | error RP
-    | error RB
     | Exp ASSIGNOP error
     | Exp PLUS error
     | Exp MINUS error
@@ -149,6 +154,10 @@ Exp : Exp ASSIGNOP Exp                          {$$ = newMBTreeNode(VAL_EMPTY, _
     | Exp RELOP error
     | Exp AND error
     | Exp OR error
+    | NOT error
+    | MINUS error
+    | LP error RP
+    | ID LP error RP
     ;               
 Args : Exp COMMA Args                           {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $3, $2, $1, NULL);}
     | Exp                                       {$$ = newMBTreeNode(VAL_EMPTY, _Args, @$.first_line); addMBTreeNode($$, $1, NULL);}
