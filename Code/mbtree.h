@@ -11,6 +11,13 @@ typedef struct MBTreeNode {
   struct MBTreeNode* nextSibling;
 } MBTreeNode;
 
+#define getMBTreeNodeData(node) (node->data)
+#define getMBTreeNodeFirstChild(node) (node->firstChild)
+#define getMBTreeNodeNextSibling(node) (node->nextSibling)
+#define getMBTreeNodeType(node) (node->data->type)
+#define getMBTreeNodeVal(node) (node->data->val)
+#define getMBTreeNodeLineNo(node) (node->data->lineno)
+
 // create a new node
 MBTreeNode* newMBTreeNodeData(Data* Data);
 MBTreeNode* newMBTreeNode(Val val, Node_type type, unsigned int lineno);

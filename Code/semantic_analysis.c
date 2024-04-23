@@ -51,7 +51,7 @@ static void print_error_massage(int code, int line);
 void semanticAnalysis(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _Program && node->nextSibling == NULL);
+  assert(getMBTreeNodeType(node) == _Program && node->nextSibling == NULL);
 
   // Program -> ExtDefList
   saExtDefList(node->firstChild);
@@ -61,10 +61,10 @@ void semanticAnalysis(MBTreeNode* node) {
 static void saExtDefList(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _ExtDefList);
+  assert(getMBTreeNodeType(node) == _ExtDefList);
 
   MBTreeNode* child = node->firstChild;
-  if (child->data->type == _Empty) {
+  if (getMBTreeNodeType(child) == _Empty) {
     // ExtDefList -> empty
     return;
   }
@@ -78,13 +78,13 @@ static void saExtDefList(MBTreeNode* node) {
 static void saExtDef(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _ExtDef);
+  assert(getMBTreeNodeType(node) == _ExtDef);
 
   MBTreeNode* specifier = node->firstChild;  // Specifier
   Type* type = saSpecifier(specifier);
 
   MBTreeNode* next = specifier->nextSibling;
-  switch (next->data->type) {
+  switch (getMBTreeNodeType(next)) {
     case _SEMI:
       // ExtDef -> Specifier SEMI
       break;
@@ -109,15 +109,15 @@ static void saExtDef(MBTreeNode* node) {
 static Type* saSpecifier(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Specifier);
+  assert(getMBTreeNodeType(node) == _Specifier);
 
   MBTreeNode* child = node->firstChild;
   Type* type = NULL;
 
-  if (child->data->type == _TYPE) {
+  if (getMBTreeNodeType(child) == _TYPE) {
     // Specifier -> TYPE
     type = saTYPE(child);
-  } else if (child->data->type == _StructSpecifier) {
+  } else if (getMBTreeNodeType(child) == _StructSpecifier) {
     // Specifier -> StructSpecifier
     type = saStructSpecifier(child);
   } else {
@@ -132,7 +132,7 @@ static Type* saSpecifier(MBTreeNode* node) {
 static Type* saTYPE(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _TYPE);
+  assert(getMBTreeNodeType(node) == _TYPE);
 
   Type* type = NULL;
 
@@ -153,27 +153,27 @@ static Type* saTYPE(MBTreeNode* node) {
 static Type* saStructSpecifier(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _StructSpecifier);
+  assert(getMBTreeNodeType(node) == _StructSpecifier);
 
   MBTreeNode* child = node->firstChild;
-  assert(child->data->type == _STRUCT);
+  assert(getMBTreeNodeType(child) == _STRUCT);
 
   Type* type = NULL;
 
   child = child->nextSibling;
-  if (child->data->type == _OptTag) {
+  if (getMBTreeNodeType(child) == _OptTag) {
     // StructSpecifier -> STRUCT OptTag LC DefList RC
     char* tag = saOptTag(child);
 
     MBTreeNode* next = child->nextSibling;  // LC
-    assert(next->data->type == _LC);
+    assert(getMBTreeNodeType(next) == _LC);
     structDep++;
 
     next = next->nextSibling;  // DefList
     FieldList* fl = saDefList(next);
 
     next = next->nextSibling;  // RC
-    assert(next->data->type == _RC);
+    assert(getMBTreeNodeType(next) == _RC);
     structDep--;
 
     type = newTypeStructure(tag, fl);
@@ -185,7 +185,7 @@ static Type* saStructSpecifier(MBTreeNode* node) {
     }
 
     freeFieldList(fl);
-  } else if (child->data->type == _Tag) {
+  } else if (getMBTreeNodeType(child) == _Tag) {
     // StructSpecifier -> STRUCT Tag
     char* tag = saTag(child);
     HashEntry* he = htFind(ht, tag);
@@ -207,7 +207,7 @@ static Type* saStructSpecifier(MBTreeNode* node) {
 static char* saTag(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Tag);
+  assert(getMBTreeNodeType(node) == _Tag);
 
   // Tag -> ID
   return saID(node->firstChild);
@@ -217,10 +217,10 @@ static char* saTag(MBTreeNode* node) {
 static char* saOptTag(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _OptTag);
+  assert(getMBTreeNodeType(node) == _OptTag);
 
   MBTreeNode* child = node->firstChild;
-  if (child->data->type == _Empty) {
+  if (getMBTreeNodeType(child) == _Empty) {
     // OptTag -> empty
     return "";
   }
@@ -233,7 +233,7 @@ static char* saOptTag(MBTreeNode* node) {
 static char* saID(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _ID);
+  assert(getMBTreeNodeType(node) == _ID);
 
   return node->data->value.val_str;
 }
@@ -242,10 +242,10 @@ static char* saID(MBTreeNode* node) {
 static FieldList* saDefList(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _DefList);
+  assert(getMBTreeNodeType(node) == _DefList);
 
   MBTreeNode* child = node->firstChild;
-  if (child->data->type == _Empty) {
+  if (getMBTreeNodeType(child) == _Empty) {
     // DefList -> empty
     return NULL;
   }
@@ -268,7 +268,7 @@ static FieldList* saDefList(MBTreeNode* node) {
 static FieldList* saDef(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Def);
+  assert(getMBTreeNodeType(node) == _Def);
 
   // Def -> Specifier DecList SEMI
   MBTreeNode* specifier = node->firstChild;
@@ -276,7 +276,7 @@ static FieldList* saDef(MBTreeNode* node) {
 
   MBTreeNode* decList = specifier->nextSibling;
 
-  assert(decList->nextSibling->data->type == _SEMI);
+  assert(getMBTreeNodeType(decList->nextSibling) == _SEMI);
 
   FieldList* fl = saDecList(decList, type);
 
@@ -289,7 +289,7 @@ static FieldList* saDef(MBTreeNode* node) {
 static FieldList* saDecList(MBTreeNode* node, Type* type) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _DecList);
+  assert(getMBTreeNodeType(node) == _DecList);
 
   MBTreeNode* child = node->firstChild;  // Dec
   FieldList* dec = saDec(child, type);
@@ -300,7 +300,7 @@ static FieldList* saDecList(MBTreeNode* node, Type* type) {
     return dec;
   }
 
-  assert(next->data->type == _COMMA);
+  assert(getMBTreeNodeType(next) == _COMMA);
 
   // DecList -> Dec COMMA DecList
   FieldList* decList = saDecList(next->nextSibling, type);
@@ -314,7 +314,7 @@ static FieldList* saDecList(MBTreeNode* node, Type* type) {
 static FieldList* saDec(MBTreeNode* node, Type* type) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Dec);
+  assert(getMBTreeNodeType(node) == _Dec);
 
   MBTreeNode* child = node->firstChild;  // VarDec
   FieldList* varDec = saVarDec(child, type);
@@ -322,7 +322,7 @@ static FieldList* saDec(MBTreeNode* node, Type* type) {
   child = child->nextSibling;
   if (child == NULL) {
     // Dec -> VarDec
-  } else if (child->data->type == _ASSIGNOP) {
+  } else if (getMBTreeNodeType(child) == _ASSIGNOP) {
     // Dec -> VarDec ASSIGNOP Exp
     if (structDep > 0) {
       print_error_massage(RED_STR_MEM_OR_INIT, node->data->lineno);
@@ -356,11 +356,11 @@ static FieldList* saDec(MBTreeNode* node, Type* type) {
 static FieldList* saVarDec(MBTreeNode* node, Type* type) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _VarDec);
+  assert(getMBTreeNodeType(node) == _VarDec);
 
   MBTreeNode* child = node->firstChild;
   FieldList* fl = NULL;
-  if (child->data->type == _ID) {
+  if (getMBTreeNodeType(child) == _ID) {
     // VarDec -> ID
     char* name = saID(child);
     fl = newFieldList(name, type, NULL);
@@ -369,7 +369,7 @@ static FieldList* saVarDec(MBTreeNode* node, Type* type) {
     fl = saVarDec(child, type);
 
     MBTreeNode* next = child->nextSibling;
-    assert(next->data->type == _LB);
+    assert(getMBTreeNodeType(next) == _LB);
 
     next = next->nextSibling;
     int size = saINT(next);
@@ -396,7 +396,7 @@ static FieldList* saVarDec(MBTreeNode* node, Type* type) {
     }
 
     next = next->nextSibling;
-    assert(next->data->type == _RB);
+    assert(getMBTreeNodeType(next) == _RB);
   }
   return fl;
 }
@@ -405,7 +405,7 @@ static FieldList* saVarDec(MBTreeNode* node, Type* type) {
 static int saINT(MBTreeNode* node) {
   if (node == NULL) return 0;
 
-  assert(node->data->type == _INT);
+  assert(getMBTreeNodeType(node) == _INT);
 
   return node->data->value.val_int;
 }
@@ -414,7 +414,7 @@ static int saINT(MBTreeNode* node) {
 static void saFunDec(MBTreeNode* node, Type* type) {
   if (node == NULL) return;
 
-  assert(node->data->type == _FunDec);
+  assert(getMBTreeNodeType(node) == _FunDec);
 
   // record the return type of the function
   retType = type;
@@ -423,17 +423,17 @@ static void saFunDec(MBTreeNode* node, Type* type) {
   char* name = saID(child);
 
   child = child->nextSibling;  // LP
-  assert(child->data->type == _LP);
+  assert(getMBTreeNodeType(child) == _LP);
 
   Type* function = newTypeFunction(type, NULL);
 
   child = child->nextSibling;
-  if (child->data->type == _VarList) {
+  if (getMBTreeNodeType(child) == _VarList) {
     // FunDec -> ID LP VarList RP
     function->function.params = saVarList(child);
 
-    assert(child->nextSibling->data->type == _RP);
-  } else if (child->data->type == _RP) {
+    assert(getMBTreeNodeType(child->nextSibling) == _RP);
+  } else if (getMBTreeNodeType(child) == _RP) {
     // FunDec -> ID LP RP
   } else {
     // error
@@ -451,7 +451,7 @@ static void saFunDec(MBTreeNode* node, Type* type) {
 static FieldList* saVarList(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _VarList);
+  assert(getMBTreeNodeType(node) == _VarList);
 
   MBTreeNode* child = node->firstChild;  // ParamDec
   FieldList* fl = saParamDec(child);
@@ -462,7 +462,7 @@ static FieldList* saVarList(MBTreeNode* node) {
     return fl;
   }
 
-  assert(next->data->type == _COMMA);
+  assert(getMBTreeNodeType(next) == _COMMA);
 
   // VarList -> ParamDec COMMA VarList
   assert(fl->next == NULL);
@@ -475,7 +475,7 @@ static FieldList* saVarList(MBTreeNode* node) {
 static FieldList* saParamDec(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _ParamDec);
+  assert(getMBTreeNodeType(node) == _ParamDec);
 
   // ParamDec -> Specifier VarDec
   MBTreeNode* child = node->firstChild;
@@ -497,10 +497,10 @@ static FieldList* saParamDec(MBTreeNode* node) {
 static void saCompSt(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _CompSt);
+  assert(getMBTreeNodeType(node) == _CompSt);
 
   MBTreeNode* child = node->firstChild;  // LC
-  assert(child->data->type == _LC);
+  assert(getMBTreeNodeType(child) == _LC);
 
   // CompSt -> LC DefList StmtList RC
   child = child->nextSibling;  // DefList
@@ -510,17 +510,17 @@ static void saCompSt(MBTreeNode* node) {
   saStmtList(child);
 
   child = child->nextSibling;  // RC
-  assert(child->data->type == _RC);
+  assert(getMBTreeNodeType(child) == _RC);
 }
 
 // analyse the StmtList node
 static void saStmtList(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _StmtList);
+  assert(getMBTreeNodeType(node) == _StmtList);
 
   MBTreeNode* child = node->firstChild;
-  if (child->data->type == _Empty) {
+  if (getMBTreeNodeType(child) == _Empty) {
     // StmtList -> empty
     return;
   }
@@ -534,14 +534,14 @@ static void saStmtList(MBTreeNode* node) {
 static void saStmt(MBTreeNode* node) {
   if (node == NULL) return;
 
-  assert(node->data->type == _Stmt);
+  assert(getMBTreeNodeType(node) == _Stmt);
 
   MBTreeNode* child = node->firstChild;
-  switch (child->data->type) {
+  switch (getMBTreeNodeType(child)) {
     case _Exp:
       // Stmt -> Exp SEMI
       saExp(child, NOT_LVALUE);
-      assert(child->nextSibling->data->type == _SEMI);
+      assert(getMBTreeNodeType(child->nextSibling) == _SEMI);
       break;
     case _CompSt:
       // Stmt -> CompSt
@@ -555,13 +555,13 @@ static void saStmt(MBTreeNode* node) {
         print_error_massage(RET_TYP_MIS, node->data->lineno);
       }
 
-      assert(child->nextSibling->data->type == _SEMI);
+      assert(getMBTreeNodeType(child->nextSibling) == _SEMI);
       break;
     }
     case _IF: {
       // Stmt -> IF LP Exp RP Stmt
       child = child->nextSibling;  // LP
-      assert(child->data->type == _LP);
+      assert(getMBTreeNodeType(child) == _LP);
 
       child = child->nextSibling;  // Exp
       Type* t = saExp(child, NOT_LVALUE);
@@ -570,7 +570,7 @@ static void saStmt(MBTreeNode* node) {
       }
 
       child = child->nextSibling;  // RP
-      assert(child->data->type == _RP);
+      assert(getMBTreeNodeType(child) == _RP);
 
       child = child->nextSibling;  // Stmt
       saStmt(child);
@@ -578,7 +578,7 @@ static void saStmt(MBTreeNode* node) {
       child = child->nextSibling;
       if (child != NULL) {
         // Stmt -> IF LP Exp RP Stmt ELSE Stmt
-        assert(child->data->type == _ELSE);
+        assert(getMBTreeNodeType(child) == _ELSE);
         child = child->nextSibling;
         saStmt(child);
       }
@@ -587,7 +587,7 @@ static void saStmt(MBTreeNode* node) {
     case _WHILE: {
       // Stmt -> WHILE LP Exp RP Stmt
       child = child->nextSibling;  // LP
-      assert(child->data->type == _LP);
+      assert(getMBTreeNodeType(child) == _LP);
 
       child = child->nextSibling;  // Exp
       Type* t = saExp(child, NOT_LVALUE);
@@ -596,7 +596,7 @@ static void saStmt(MBTreeNode* node) {
       }
 
       child = child->nextSibling;  // RP
-      assert(child->data->type == _RP);
+      assert(getMBTreeNodeType(child) == _RP);
 
       child = child->nextSibling;  // Stmt
       saStmt(child);
@@ -612,16 +612,16 @@ static void saStmt(MBTreeNode* node) {
 static Type* saExp(MBTreeNode* node, int isLvalue) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Exp);
+  assert(getMBTreeNodeType(node) == _Exp);
 
   Type* type = NULL;
 
   MBTreeNode* child = node->firstChild;
-  switch (child->data->type) {
+  switch (getMBTreeNodeType(child)) {
     case _Exp: {
       Type* t1 = saExp(child, NOT_LVALUE);
       child = child->nextSibling;
-      if (child->data->type == _DOT) {
+      if (getMBTreeNodeType(child) == _DOT) {
         // Exp -> Exp DOT ID
         if (t1 == NULL) {
           break;
@@ -647,7 +647,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
         }
 
         goto ret;
-      } else if (child->data->type == _LB) {
+      } else if (getMBTreeNodeType(child) == _LB) {
         // Exp -> Exp LB Exp RB
         Type* t2 = saExp(child->nextSibling, NOT_LVALUE);
         if (t1 == NULL || t1->kind != ARRAY) {
@@ -671,7 +671,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
         // Exp -> Exp STAR Exp
         // Exp -> Exp DIV Exp
         Type* t2 = saExp(child->nextSibling, NOT_LVALUE);
-        if (child->data->type == _ASSIGNOP) {
+        if (getMBTreeNodeType(child) == _ASSIGNOP) {
           t1 = saExp(node->firstChild, IS_LVALUE);
 
           if (!typeEqual(t1, t2)) {
@@ -682,7 +682,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
             print_error_massage(OP_MIS, node->data->lineno);
           }
         }
-        if (child->data->type == _RELOP) {
+        if (getMBTreeNodeType(child) == _RELOP) {
           type = newTypeBasic(BASIC_TYPE_INT);
         } else {
           type = t1;
@@ -696,7 +696,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
       child = child->nextSibling;
       type = saExp(child, NOT_LVALUE);
 
-      assert(child->nextSibling->data->type == _RP);
+      assert(getMBTreeNodeType(child->nextSibling) == _RP);
       break;
     case _MINUS:
       // Exp -> MINUS Exp
@@ -734,9 +734,9 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
           break;
         }
 
-        assert(child->data->type == _LP);
+        assert(getMBTreeNodeType(child) == _LP);
         child = child->nextSibling;
-        if (child->data->type == _Args) {
+        if (getMBTreeNodeType(child) == _Args) {
           // Exp -> ID LP Args RP
           FieldList* fl = saArgs(child);
 
@@ -746,8 +746,8 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
 
           freeFieldList(fl);
 
-          assert(child->nextSibling->data->type == _RP);
-        } else if (child->data->type == _RP) {
+          assert(getMBTreeNodeType(child->nextSibling) == _RP);
+        } else if (getMBTreeNodeType(child) == _RP) {
           // Exp -> ID LP RP
           if (t->function.params != NULL) {
             print_error_massage(PAR_MIS, node->data->lineno);
@@ -795,7 +795,7 @@ ret:
 static FieldList* saArgs(MBTreeNode* node) {
   if (node == NULL) return NULL;
 
-  assert(node->data->type == _Args);
+  assert(getMBTreeNodeType(node) == _Args);
 
   MBTreeNode* child = node->firstChild;
   FieldList* fl = newFieldList("", saExp(child, NOT_LVALUE), NULL);
@@ -806,7 +806,7 @@ static FieldList* saArgs(MBTreeNode* node) {
     return fl;
   }
 
-  assert(next->data->type == _COMMA);
+  assert(getMBTreeNodeType(next) == _COMMA);
 
   // Args -> Exp COMMA Args
   assert(fl->next == NULL);
@@ -819,7 +819,7 @@ static FieldList* saArgs(MBTreeNode* node) {
 static void saExtDecList(MBTreeNode* node, Type* type) {
   if (node == NULL) return;
 
-  assert(node->data->type == _ExtDecList);
+  assert(getMBTreeNodeType(node) == _ExtDecList);
 
   MBTreeNode* child = node->firstChild;  // VarDec
   FieldList* fl = saVarDec(child, type);
@@ -831,7 +831,7 @@ static void saExtDecList(MBTreeNode* node, Type* type) {
   MBTreeNode* next = child->nextSibling;
   if (next == NULL) {
     // ExtDecList -> VarDec
-  } else if (next->data->type == _COMMA) {
+  } else if (getMBTreeNodeType(next) == _COMMA) {
     // ExtDecList -> VarDec COMMA ExtDecList
     saExtDecList(next->nextSibling, type);
   } else {
