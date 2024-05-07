@@ -10,6 +10,7 @@
 #define NOT_LVALUE 0
 
 extern HashTable* ht;
+extern int hasMultiDimensionalArrays;
 
 static Type* retType = NULL;
 static int structDep = 0;
@@ -49,6 +50,12 @@ static void print_error_massage(int code, int line);
 
 // semantic analysis entry
 void semanticAnalysis(MBTreeNode* node) {
+  // add the built-in functions read and write to the symbol table
+  FieldList* fl = newFieldList("", newTypeBasic(BASIC_TYPE_INT), NULL);
+  htAdd(ht, "write", newTypeFunction(newTypeBasic(BASIC_TYPE_INT), fl));
+  htAdd(ht, "read", newTypeFunction(newTypeBasic(BASIC_TYPE_INT), NULL));
+  freeFieldList(fl);
+
   if (node == NULL) return;
 
   assert(getMBTreeNodeType(node) == _Program && node->nextSibling == NULL);
@@ -659,6 +666,10 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
           break;
         }
         type = t1->array.element;
+
+        if (t1->array.element->kind == ARRAY) {
+          hasMultiDimensionalArrays = 1;
+        }
 
         goto ret;
       } else {
