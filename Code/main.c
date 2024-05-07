@@ -9,12 +9,14 @@
 #define FUNC_PTR_CAST(f) ((unsigned int (*)(const void*))f)
 
 MBTreeNode* root = NULL;
-int has_error = 0;
 HashTable* ht = NULL;
+int has_error = 0;
+int hasMultiDimensionalArrays = 0;
 
 extern int yyparse();
 extern int yyrestart(FILE*);
 extern void semanticAnalysis(MBTreeNode* node);
+extern void IRGenerate(MBTreeNode* node, FILE* fout);
 extern char* strdup(const char*);
 extern int yydebug;
 
@@ -61,6 +63,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  FILE* fout = NULL;
+  if (argc <= 2) {
+    fout = stdout;
+  } else {
+    fout = fopen(argv[2], "w");
+    if (!fout) {
+      perror(argv[2]);
+      return 1;
+    }
+  }
+
   yyrestart(f);
   yyparse();
 
@@ -69,8 +82,16 @@ int main(int argc, char** argv) {
   if (!has_error) {
     // displayMBTreeNode(root, 0);
     semanticAnalysis(root);
+    if (!hasMultiDimensionalArrays) {
+      IRGenerate(root, fout);
+    } else {
+      fprintf(stderr,
+              "Cannot translate: Code contains variables of multi-dimensional "
+              "array type or  parameters of array type.\n");
+    }
   }
 
+  fclose(fout);
   cleanup();
 
   return 0;
