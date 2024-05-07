@@ -15,7 +15,7 @@ typedef struct MBTreeNode {
 #define getMBTreeNodeFirstChild(node) (node->firstChild)
 #define getMBTreeNodeNextSibling(node) (node->nextSibling)
 #define getMBTreeNodeType(node) (node->data->type)
-#define getMBTreeNodeVal(node) (node->data->val)
+#define getMBTreeNodeValue(node) (node->data->value)
 #define getMBTreeNodeLineNo(node) (node->data->lineno)
 
 // create a new node
