@@ -74,7 +74,7 @@ WHITE       [\t\f\r\v ]
 {SEMI}      { YY_VAL(VAL_EMPTY, SEMI); return SEMI; }
 {COMMA}     { YY_VAL(VAL_EMPTY, COMMA); return COMMA; }
 {ASSIGNOP}  { YY_VAL(VAL_EMPTY, ASSIGNOP); return ASSIGNOP; }
-{RELOP}     { YY_VAL(VAL_EMPTY,RELOP);return RELOP; }
+{RELOP}     { YY_VAL(val_str(yytext), RELOP);return RELOP; }
 {PLUS}      { YY_VAL(VAL_EMPTY, PLUS); return PLUS; }
 {MINUS}     { YY_VAL(VAL_EMPTY, MINUS); return MINUS; }
 {STAR}      { YY_VAL(VAL_EMPTY, STAR); return STAR; }
@@ -96,15 +96,15 @@ WHITE       [\t\f\r\v ]
 {ELSE}      { YY_VAL(VAL_EMPTY, ELSE); return ELSE; }
 {WHILE}     { YY_VAL(VAL_EMPTY, WHILE); return WHILE; }
 {INT}       { YY_VAL(VAL_INT(yytext), INT); return INT; }
-{FLOAT}     { YY_VAL(VAL_FLOAT(yytext),FLOAT); return FLOAT; }
+{FLOAT}     { YY_VAL(VAL_FLOAT(yytext), FLOAT); return FLOAT; }
 {OCTAL}     { YY_VAL(VAL_INT(yytext), INT); print_error("Octal number is not supported"); return INT; }
 {HEX}       { YY_VAL(VAL_INT(yytext), INT); print_error("Hexadecimal number is not supported"); return INT; }
-{EXPONENT}  { YY_VAL(VAL_FLOAT(yytext),FLOAT); print_error("Exponential number is not supported"); return FLOAT; }
+{EXPONENT}  { YY_VAL(VAL_FLOAT(yytext), FLOAT); print_error("Exponential number is not supported"); return FLOAT; }
 {ID}        {   
                 if (isdigit(yytext[0])) {
                     print_error("Identifier cannot start with a digit");
                 }
-                YY_VAL(val_str(yytext),ID); 
+                YY_VAL(val_str(yytext), ID); 
                 return ID; 
             }
 \n          { yycolumn = 1; }
