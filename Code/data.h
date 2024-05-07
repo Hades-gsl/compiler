@@ -2,6 +2,8 @@
 #define DATA_H
 
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -118,11 +120,15 @@ struct Type {
     struct {
       Type* element;
       int size;
+      // the size of the array in memory, in bytes
+      size_t memSize;
     } array;
 
     struct {
       char* name;
       FieldList* structure;
+      // the size of the structure in memory, in bytes
+      size_t memSize;
     } structure;
 
     struct {
@@ -205,5 +211,90 @@ static const char* error_msg[] = {
     "Structure name conflicts with a previously defined structure or variable "
     "name.",
     "Undefined structure used to define a variable."};
+
+/*--------------------------------ir generate--------------------------------*/
+
+// basic type memory size of a type, in bytes
+#define BASIC_MEM_SIZE 4
+
+// get the size of a type in memory, in bytes
+// if the memSize field is 0, calculate it and store it in the field
+size_t getMemSize(Type* t);
+
+typedef struct Operand {
+  enum {
+    OP_VARIABLE,  // variable
+    OP_CONSTANT,  // constant
+    OP_ADDRESS,   // address
+    OP_TEMP,      // temporary variable
+    OP_LABEL,     // label
+    OP_FUNCTION   // function
+  } kind;
+  union {
+    char* var_name;
+    intptr_t constant;
+    char* base_name;
+    size_t temp_no;
+    size_t label_no;
+    char* func_name;
+  };
+  Type* type;
+} Operand;
+
+Operand* newOperand(int kind, void* val, Type* type);
+void operandTmp2Addr(Operand* op);
+char* operand2str(Operand* op);
+
+typedef struct IRCode {
+  enum {
+    IR_LABEL,      // label l :
+    IR_FUNCTION,   // function f :
+    IR_ASSIGN,     // x := y
+    IR_ADD,        // x := y + z
+    IR_SUB,        // x := y - z
+    IR_MUL,        // x := y * z
+    IR_DIV,        // x := y / z
+    IR_GET_ADDR,   // x := &y
+    IR_GET_VALUE,  // x := *y
+    IR_SET_VALUE,  // *x := y
+    IR_GOTO,       // goto l
+    IR_IF_GOTO,    // if x [relop] y goto l
+    IR_RETURN,     // return x
+    IR_DEC,        // dec x [size]
+    IR_ARG,        // arg x
+    IR_CALL,       // x := call f
+    IR_PARAM,      // param x
+    IR_READ,       // read x
+    IR_WRITE       // write x
+  } kind;
+  union {
+    struct {
+      Operand* op;
+    };  // IR_LABEL, IR_FUNCTION, IR_GOTO, IR_RETURN, IR_ARG, IR_PARAM, IR_READ,
+        // IR_WRITE
+    struct {
+      Operand* left;
+      Operand* right;
+    };  // IR_ASSIGN, IR_GET_ADDR, IR_GET_VALUE, IR_SET_VALUE, IR_CALL
+    struct {
+      Operand* result;
+      Operand* op1;
+      Operand* op2;
+    };  // IR_ADD, IR_SUB, IR_MUL, IR_DIV
+    struct {
+      Operand* operand;
+      int size;
+    };  // IR_DEC
+    struct {
+      Operand* op_l;
+      char* relop;
+      Operand* op_r;
+      Operand* label;
+    };  // IR_IF_GOTO
+  };
+} IRCode;
+
+IRCode* newIRCode(int kind, ...);
+void printIRCode(FILE* fout, IRCode* ir);
 
 #endif  // DATA_H

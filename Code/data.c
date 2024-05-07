@@ -1,6 +1,8 @@
 #include "data.h"
 
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 extern char* strdup(const char*);
@@ -19,13 +21,17 @@ Type* newTypeStructure(char* name, FieldList* structure) {
   Type* t = malloc(sizeof(Type));
   *t = (Type){.kind = STRUCTURE,
               .structure.name = strdup(name),
-              .structure.structure = copyFieldList(structure)};
+              .structure.structure = copyFieldList(structure),
+              .structure.memSize = 0};
   return t;
 }
 
 Type* newTypeArray(Type* element, int size) {
   Type* t = malloc(sizeof(Type));
-  *t = (Type){.kind = ARRAY, .array.size = size, .array.element = NULL};
+  *t = (Type){.kind = ARRAY,
+              .array.size = size,
+              .array.element = NULL,
+              .array.memSize = 0};
   if (element) {
     t->array.element = copyType[element->kind](element);
   }
@@ -137,7 +143,8 @@ Type* copyTypeStructure(Type* t) {
   *newType =
       (Type){.kind = STRUCTURE,
              .structure.name = strdup(t->structure.name),
-             .structure.structure = copyFieldList(t->structure.structure)};
+             .structure.structure = copyFieldList(t->structure.structure),
+             .structure.memSize = t->structure.memSize};
 
   return newType;
 }
@@ -150,8 +157,10 @@ Type* copyTypeArray(Type* t) {
   assert(t->kind == ARRAY);
 
   Type* newType = malloc(sizeof(Type));
-  *newType =
-      (Type){.kind = ARRAY, .array.size = t->array.size, .array.element = NULL};
+  *newType = (Type){.kind = ARRAY,
+                    .array.size = t->array.size,
+                    .array.element = NULL,
+                    .array.memSize = t->array.memSize};
   if (t->array.element) {
     newType->array.element = copyType[t->array.element->kind](t->array.element);
   }
@@ -191,4 +200,227 @@ FieldList* copyFieldList(FieldList* fl) {
   }
 
   return newFieldList;
+}
+
+/*--------------------------------ir generate--------------------------------*/
+size_t getMemSize(Type* t) {
+  if (t == NULL || t->kind == FUNCTION) {
+    return 0;
+  }
+
+  switch (t->kind) {
+    case BASIC:
+      return BASIC_MEM_SIZE;
+    case ARRAY:
+      if (t->array.memSize == 0) {
+        t->array.memSize = t->array.size * getMemSize(t->array.element);
+      }
+      return t->array.memSize;
+    case STRUCTURE: {
+      if (t->structure.memSize == 0) {
+        FieldList* fl = t->structure.structure;
+        while (fl) {
+          t->structure.memSize += getMemSize(fl->type);
+          fl = fl->next;
+        }
+      }
+      return t->structure.memSize;
+    }
+    default: {
+      // we should never reach here
+      assert(0);
+    }
+  }
+}
+
+Operand* newOperand(int kind, void* val, Type* type) {
+  Operand* op = malloc(sizeof(Operand));
+  *op = (Operand){.kind = kind, .type = type};
+  switch (kind) {
+    case OP_CONSTANT:
+      op->constant = (intptr_t)val;
+      break;
+    case OP_TEMP:
+      op->temp_no = (size_t)val;
+      break;
+    case OP_LABEL:
+      op->label_no = (size_t)val;
+      break;
+    case OP_FUNCTION:
+      op->func_name = (char*)val;
+      break;
+    case OP_VARIABLE:
+      op->var_name = (char*)val;
+      break;
+    case OP_ADDRESS:
+      op->base_name = (char*)val;
+      break;
+    default:
+      // we should never reach here
+      assert(0);
+      break;
+  }
+  return op;
+}
+
+char* operand2str(Operand* op) {
+  char* str = malloc(32);
+  switch (op->kind) {
+    case OP_CONSTANT:
+      sprintf(str, "#%ld", op->constant);
+      break;
+    case OP_TEMP:
+      sprintf(str, "t%ld", op->temp_no);
+      break;
+    case OP_LABEL:
+      sprintf(str, "l%ld", op->label_no);
+      break;
+    case OP_FUNCTION:
+      sprintf(str, "%s", op->func_name);
+      break;
+    case OP_VARIABLE:
+      sprintf(str, "%s", op->var_name);
+      break;
+    case OP_ADDRESS:
+      sprintf(str, "%s", op->base_name);
+      break;
+    default:
+      // we should never reach here
+      assert(0);
+      break;
+  }
+  return str;
+}
+
+void operandTmp2Addr(Operand* op) {
+  assert(op->kind == OP_TEMP);
+
+  op->kind = OP_ADDRESS;
+  op->base_name = malloc(32);
+  sprintf(op->base_name, "t%ld", op->temp_no);
+}
+
+IRCode* newIRCode(int kind, ...) {
+  va_list ap;
+  va_start(ap, kind);
+
+  IRCode* ir = malloc(sizeof(IRCode));
+  ir->kind = kind;
+
+  switch (kind) {
+    case IR_LABEL:
+    case IR_FUNCTION:
+    case IR_GOTO:
+    case IR_RETURN:
+    case IR_ARG:
+    case IR_PARAM:
+    case IR_READ:
+    case IR_WRITE:
+      ir->op = va_arg(ap, Operand*);
+      break;
+    case IR_ASSIGN:
+    case IR_GET_ADDR:
+    case IR_GET_VALUE:
+    case IR_SET_VALUE:
+    case IR_CALL:
+      ir->left = va_arg(ap, Operand*);
+      ir->right = va_arg(ap, Operand*);
+      break;
+    case IR_ADD:
+    case IR_SUB:
+    case IR_MUL:
+    case IR_DIV:
+      ir->result = va_arg(ap, Operand*);
+      ir->op1 = va_arg(ap, Operand*);
+      ir->op2 = va_arg(ap, Operand*);
+      break;
+    case IR_DEC:
+      ir->operand = va_arg(ap, Operand*);
+      ir->size = va_arg(ap, int);
+      break;
+    case IR_IF_GOTO:
+      ir->op_l = va_arg(ap, Operand*);
+      ir->relop = va_arg(ap, char*);
+      ir->op_r = va_arg(ap, Operand*);
+      ir->label = va_arg(ap, Operand*);
+      break;
+    default:
+      // we should never reach here
+      assert(0);
+      break;
+  }
+
+  va_end(ap);
+  return ir;
+}
+
+void printIRCode(FILE* fout, IRCode* ir) {
+  static char* ir_template[] = {
+      "LABEL %s :\n",    "FUNCTION %s :\n", "%s := %s\n",
+      "%s := %s + %s\n", "%s := %s - %s\n", "%s := %s * %s\n",
+      "%s := %s / %s\n", "%s := &%s\n",     "%s := *%s\n",
+      "*%s := %s\n",     "GOTO %s\n",       "IF %s %s %s GOTO %s\n",
+      "RETURN %s\n",     "DEC %s %d\n",     "ARG %s\n",
+      "%s := CALL %s\n", "PARAM %s\n",      "READ %s\n",
+      "WRITE %s\n",
+  };
+
+  char *s1 = NULL, *s2 = NULL, *s3 = NULL;
+
+  switch (ir->kind) {
+    case IR_LABEL:
+    case IR_FUNCTION:
+    case IR_GOTO:
+    case IR_RETURN:
+    case IR_ARG:
+    case IR_PARAM:
+    case IR_READ:
+    case IR_WRITE:
+      s1 = operand2str(ir->op);
+      fprintf(fout, ir_template[ir->kind], s1);
+      break;
+    case IR_ASSIGN:
+    case IR_GET_ADDR:
+    case IR_GET_VALUE:
+    case IR_SET_VALUE:
+    case IR_CALL:
+      s1 = operand2str(ir->left);
+      s2 = operand2str(ir->right);
+      fprintf(fout, ir_template[ir->kind], s1, s2);
+      break;
+    case IR_ADD:
+    case IR_SUB:
+    case IR_MUL:
+    case IR_DIV:
+      s1 = operand2str(ir->result);
+      s2 = operand2str(ir->op1);
+      s3 = operand2str(ir->op2);
+      fprintf(fout, ir_template[ir->kind], s1, s2, s3);
+      break;
+    case IR_DEC:
+      s1 = operand2str(ir->operand);
+      fprintf(fout, ir_template[ir->kind], s1, ir->size);
+      free(s1);
+      break;
+    case IR_IF_GOTO:
+      s1 = operand2str(ir->op_l);
+      s2 = operand2str(ir->op_r);
+      s3 = operand2str(ir->label);
+      fprintf(fout, ir_template[ir->kind], s1, ir->relop, s2, s3);
+      break;
+    default:
+      // we should never reach here
+      assert(0);
+      break;
+  }
+
+  if (s1) {
+    free(s1);
+  }
+  if (s2) {
+    free(s2);
+  }
+  if (s3) {
+    free(s3);
+  }
 }
