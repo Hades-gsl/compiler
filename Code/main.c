@@ -11,7 +11,7 @@
 MBTreeNode* root = NULL;
 HashTable* ht = NULL;
 int has_error = 0;
-int hasMultiDimensionalArrays = 0;
+int translateEnabled = 1;
 
 extern int yyparse();
 extern int yyrestart(FILE*);
@@ -47,11 +47,6 @@ static void init() {
   // yydebug = 1;
 }
 
-static void cleanup() {
-  freeMBTreeNode(root);
-  htRelease(ht);
-}
-
 int main(int argc, char** argv) {
   if (argc <= 1) return 1;
 
@@ -64,15 +59,6 @@ int main(int argc, char** argv) {
   }
 
   FILE* fout = NULL;
-  if (argc <= 2) {
-    fout = stdout;
-  } else {
-    fout = fopen(argv[2], "w");
-    if (!fout) {
-      perror(argv[2]);
-      return 1;
-    }
-  }
 
   yyrestart(f);
   yyparse();
@@ -82,17 +68,26 @@ int main(int argc, char** argv) {
   if (!has_error) {
     // displayMBTreeNode(root, 0);
     semanticAnalysis(root);
-    if (!hasMultiDimensionalArrays) {
+    if (translateEnabled) {
+      if (argc <= 2) {
+        fout = stdout;
+      } else {
+        fout = fopen(argv[2], "w");
+        if (!fout) {
+          perror(argv[2]);
+          return 1;
+        }
+      }
+
       IRGenerate(root, fout);
+
+      if (argc > 2) fclose(fout);
     } else {
       fprintf(stderr,
               "Cannot translate: Code contains variables of multi-dimensional "
-              "array type or  parameters of array type.\n");
+              "array type or parameters of array type.\n");
     }
   }
-
-  fclose(fout);
-  cleanup();
 
   return 0;
 }

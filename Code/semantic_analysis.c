@@ -10,7 +10,7 @@
 #define NOT_LVALUE 0
 
 extern HashTable* ht;
-extern int hasMultiDimensionalArrays;
+extern int translateEnabled;
 
 static Type* retType = NULL;
 static int structDep = 0;
@@ -495,6 +495,10 @@ static FieldList* saParamDec(MBTreeNode* node) {
     print_error_massage(RED_VAR, node->data->lineno);
   }
 
+  if (fl->type->kind == ARRAY) {
+    translateEnabled = 0;
+  }
+
   freeType(type);
 
   return fl;
@@ -668,7 +672,7 @@ static Type* saExp(MBTreeNode* node, int isLvalue) {
         type = t1->array.element;
 
         if (t1->array.element->kind == ARRAY) {
-          hasMultiDimensionalArrays = 1;
+          translateEnabled = 0;
         }
 
         goto ret;
