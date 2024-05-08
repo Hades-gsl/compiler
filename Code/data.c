@@ -1,6 +1,7 @@
 #include "data.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -267,13 +268,13 @@ char* operand2str(Operand* op) {
   char* str = malloc(32);
   switch (op->kind) {
     case OP_CONSTANT:
-      sprintf(str, "#%ld", op->constant);
+      sprintf(str, "#%" PRIdPTR, op->constant);
       break;
     case OP_TEMP:
-      sprintf(str, "t%ld", op->temp_no);
+      sprintf(str, "t%zu", op->temp_no);
       break;
     case OP_LABEL:
-      sprintf(str, "l%ld", op->label_no);
+      sprintf(str, "l%zu", op->label_no);
       break;
     case OP_FUNCTION:
       sprintf(str, "%s", op->func_name);
@@ -296,8 +297,9 @@ void operandTmp2Addr(Operand* op) {
   assert(op->kind == OP_TEMP);
 
   op->kind = OP_ADDRESS;
-  op->base_name = malloc(32);
-  sprintf(op->base_name, "t%ld", op->temp_no);
+  char* name = malloc(32);
+  sprintf(name, "t%zu", op->temp_no);
+  op->base_name = name;
 }
 
 IRCode* newIRCode(int kind, ...) {
@@ -356,12 +358,12 @@ IRCode* newIRCode(int kind, ...) {
 
 void printIRCode(FILE* fout, IRCode* ir) {
   static char* ir_template[] = {
-      "LABEL %s :\n",    "FUNCTION %s :\n", "%s := %s\n",
-      "%s := %s + %s\n", "%s := %s - %s\n", "%s := %s * %s\n",
-      "%s := %s / %s\n", "%s := &%s\n",     "%s := *%s\n",
-      "*%s := %s\n",     "GOTO %s\n",       "IF %s %s %s GOTO %s\n",
-      "RETURN %s\n",     "DEC %s %d\n",     "ARG %s\n",
-      "%s := CALL %s\n", "PARAM %s\n",      "READ %s\n",
+      "LABEL %s :\n",    "\nFUNCTION %s :\n", "%s := %s\n",
+      "%s := %s + %s\n", "%s := %s - %s\n",   "%s := %s * %s\n",
+      "%s := %s / %s\n", "%s := &%s\n",       "%s := *%s\n",
+      "*%s := %s\n",     "GOTO %s\n",         "IF %s %s %s GOTO %s\n",
+      "RETURN %s\n",     "DEC %s %d\n",       "ARG %s\n",
+      "%s := CALL %s\n", "PARAM %s\n",        "READ %s\n",
       "WRITE %s\n",
   };
 
@@ -400,7 +402,6 @@ void printIRCode(FILE* fout, IRCode* ir) {
     case IR_DEC:
       s1 = operand2str(ir->operand);
       fprintf(fout, ir_template[ir->kind], s1, ir->size);
-      free(s1);
       break;
     case IR_IF_GOTO:
       s1 = operand2str(ir->op_l);
