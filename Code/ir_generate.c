@@ -8,9 +8,41 @@ extern HashTable* ht;
 
 static size_t label_count = 0;
 static size_t temp_count = 0;
+static List* parmList = NULL;
+
+#define IS_LVAL 1
+#define NOT_LVAL 0
 
 #define getLabelNo (void*)(++label_count)
 #define getTempNo (void*)(++temp_count)
+
+#define getAdressAndSwap(op1, ir)                              \
+  do {                                                         \
+    Operand* _tmp = newOperand(OP_TEMP, getTempNo, op1->type); \
+    operandTmp2Addr(_tmp);                                     \
+    listAddNodeTail(ir, newIRCode(IR_GET_ADDR, _tmp, op1));    \
+    op1 = _tmp;                                                \
+  } while (0)
+
+#define getValAndSwap(op1, ir)                                 \
+  do {                                                         \
+    Operand* _tmp = newOperand(OP_TEMP, getTempNo, op1->type); \
+    listAddNodeTail(ir, newIRCode(IR_GET_VALUE, _tmp, op1));   \
+    op1 = _tmp;                                                \
+  } while (0)
+
+#define swap(op1, op2) \
+  do {                 \
+    void* _tmp = op1;  \
+    op1 = op2;         \
+    op2 = _tmp;        \
+  } while (0)
+
+#define joinAndFree(ir1, ir2) \
+  do {                        \
+    listJoin(ir1, ir2);       \
+    freeList(ir2);            \
+  } while (0)
 
 static List* translateExtDefList(MBTreeNode* node);
 static List* translateExtDef(MBTreeNode* node);
@@ -28,7 +60,7 @@ static List* translateArgs(MBTreeNode* node, List* argList);
 static List* translateStmt(MBTreeNode* node);
 static List* translateCond(MBTreeNode* node, Operand* label_true,
                            Operand* label_false);
-static List* translateExp(MBTreeNode* node, Operand* place);
+static List* translateExp(MBTreeNode* node, Operand* place, int isLVal);
 
 static char* getID(MBTreeNode* node);
 static int getINT(MBTreeNode* node);
@@ -66,8 +98,7 @@ static List* translateExtDefList(MBTreeNode* node) {
     // ExtDefList -> ExtDef ExtDefList
     ir = translateExtDef(child);
     List* ir2 = translateExtDefList(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   }
   return ir;
 }
@@ -90,13 +121,13 @@ static List* translateExtDef(MBTreeNode* node) {
     ir = translateExtDecList(child);
   } else if (getMBTreeNodeType(child) == _SEMI) {
     // ExtDef -> Specifier SEMI
-    // do nothing
+    ir = newList(NULL, NULL, NULL);
   } else if (getMBTreeNodeType(child) == _FunDec) {
     // ExtDef -> Specifier FunDec CompSt
     ir = translateFunDec(child);
     List* ir2 = translateCompSt(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
+    parmList = NULL;
   } else {
     // error
     assert(0);
@@ -125,8 +156,7 @@ static List* translateExtDecList(MBTreeNode* node) {
   } else {
     // ExtDecList -> VarDec COMMA ExtDecList
     List* ir2 = translateExtDecList(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   }
 
   return ir;
@@ -153,9 +183,9 @@ static List* translateVarDec(MBTreeNode* node, Operand* place) {
     place->type = t;
 
     if (t->kind == ARRAY) {
-      listAddNodeTail(ir, newIRCode(IR_DEC, place, t->array.memSize));
+      listAddNodeTail(ir, newIRCode(IR_DEC, place, getMemSize(t)));
     } else if (t->kind == STRUCTURE) {
-      listAddNodeTail(ir, newIRCode(IR_DEC, place, t->structure.memSize));
+      listAddNodeTail(ir, newIRCode(IR_DEC, place, getMemSize(t)));
     }
   } else if (getMBTreeNodeType(child) == _VarDec) {
     // VarDec -> VarDec LB INT RB
@@ -210,9 +240,14 @@ static List* translateFunDec(MBTreeNode* node) {
   Operand* op = newOperand(OP_FUNCTION, id, t);
   listAddNodeTail(ir, newIRCode(IR_FUNCTION, op));
 
+  parmList = newList(NULL, NULL, NULL);
   for (FieldList* fl = t->function.params; fl; fl = fl->next) {
     Operand* op = newOperand(OP_VARIABLE, fl->name, fl->type);
+    if (fl->type->kind == ARRAY || fl->type->kind == STRUCTURE) {
+      op->kind = OP_ADDRESS;
+    }
     listAddNodeTail(ir, newIRCode(IR_PARAM, op));
+    listAddNodeTail(parmList, op);
   }
 
   return ir;
@@ -236,8 +271,7 @@ static List* translateCompSt(MBTreeNode* node) {
 
   child = getMBTreeNodeNextSibling(child);  // StmtList
   List* ir2 = translateStmtList(child);
-  listJoin(ir, ir2);
-  freeList(ir2);
+  joinAndFree(ir, ir2);
 
   return ir;
 }
@@ -256,8 +290,7 @@ static List* translateDefList(MBTreeNode* node) {
     // DefList -> Def DefList
     ir = translateDef(child);
     List* ir2 = translateDefList(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   } else if (getMBTreeNodeType(child) == _Empty) {
     // DefList -> Empty
     ir = newList(NULL, NULL, NULL);
@@ -304,8 +337,7 @@ static List* translateDecList(MBTreeNode* node) {
     // DecList -> Dec COMMA DecList
     assert(getMBTreeNodeType(child) == _COMMA);
     List* ir2 = translateDecList(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   }
 
   return ir;
@@ -327,14 +359,13 @@ static List* translateDec(MBTreeNode* node) {
   child = getMBTreeNodeNextSibling(child);
   if (child == NULL) {
     // Dec -> VarDec
-    ir = newList(NULL, NULL, NULL);
+    // do nothing
   } else {
     // Dec -> VarDec ASSIGNOP Exp
     assert(getMBTreeNodeType(child) == _ASSIGNOP);
     Operand* tmp = newOperand(OP_TEMP, getTempNo, NULL);
-    List* ir2 = translateExp(getMBTreeNodeNextSibling(child), tmp);
-    listJoin(ir, ir2);
-    freeList(ir2);
+    List* ir2 = translateExp(getMBTreeNodeNextSibling(child), tmp, NOT_LVAL);
+    joinAndFree(ir, ir2);
 
     listAddNodeTail(ir, newIRCode(IR_ASSIGN, place, tmp));
   }
@@ -343,7 +374,7 @@ static List* translateDec(MBTreeNode* node) {
 }
 
 // process Exp node
-static List* translateExp(MBTreeNode* node, Operand* place) {
+static List* translateExp(MBTreeNode* node, Operand* place, int isLVal) {
   if (node == NULL) {
     return NULL;
   }
@@ -360,20 +391,19 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
           case _ASSIGNOP: {
             // Exp -> Exp1 ASSIGNOP Exp2
             Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-            ir = translateExp(getMBTreeNodeNextSibling(child2), t1);
-            List* ir2 = translateExp(child, place);
-            listJoin(ir, ir2);
-            freeList(ir2);
+            ir = translateExp(getMBTreeNodeNextSibling(child2), t1, NOT_LVAL);
+            List* ir2 = translateExp(child, place, IS_LVAL);
+            joinAndFree(ir, ir2);
 
-            if (place->kind != OP_ADDRESS && t1->kind != OP_ADDRESS) {
-              listAddNodeTail(ir, newIRCode(IR_ASSIGN, place, t1));
-            } else if (place->kind == OP_ADDRESS) {
+            if (place->kind == OP_ADDRESS) {
               listAddNodeTail(ir, newIRCode(IR_SET_VALUE, place, t1));
-            } else if (t1->kind == OP_ADDRESS) {
-              listAddNodeTail(ir, newIRCode(IR_GET_VALUE, place, t1));
+
+              Operand* t2 = newOperand(OP_TEMP, getTempNo, NULL);
+              listAddNodeTail(ir, newIRCode(IR_GET_VALUE, t2, place));
+              place->kind = OP_TEMP;
+              place->temp_no = t2->temp_no;
             } else {
-              // error
-              assert(0);
+              listAddNodeTail(ir, newIRCode(IR_ASSIGN, place, t1));
             }
             break;
           }
@@ -389,8 +419,7 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
             listAddNodeTail(ir, newIRCode(IR_ASSIGN, place,
                                           newOperand(OP_CONSTANT, 0, NULL)));
             List* ir2 = translateCond(node, label_true, label_false);
-            listJoin(ir, ir2);
-            freeList(ir2);
+            joinAndFree(ir, ir2);
             listAddNodeTail(ir, newIRCode(IR_LABEL, label_true));
             listAddNodeTail(ir,
                             newIRCode(IR_ASSIGN, place,
@@ -403,25 +432,28 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
           case _STAR:
           case _DIV: {
             // Exp -> Exp PLUS Exp
+            // Exp -> Exp MINUS Exp
+            // Exp -> Exp STAR Exp
+            // Exp -> Exp DIV Exp
             int kinds[] = {IR_ADD, IR_SUB, IR_MUL, IR_DIV};
+            int ir_kind = kinds[getMBTreeNodeType(child2) - _PLUS];
+
             Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
             Operand* t2 = newOperand(OP_TEMP, getTempNo, NULL);
-            ir = translateExp(child, t1);
-            List* ir2 = translateExp(getMBTreeNodeNextSibling(child2), t2);
-            listJoin(ir, ir2);
-            freeList(ir2);
+            ir = translateExp(child, t1, NOT_LVAL);
+            List* ir2 =
+                translateExp(getMBTreeNodeNextSibling(child2), t2, NOT_LVAL);
+            joinAndFree(ir, ir2);
 
-            int ir_kind = kinds[getMBTreeNodeType(child2) - _PLUS];
             listAddNodeTail(ir, newIRCode(ir_kind, place, t1, t2));
             break;
           }
           case _DOT: {
             // Exp -> Exp DOT ID
             Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-            ir = translateExp(child, t1);
+            ir = translateExp(child, t1, IS_LVAL);
             if (t1->kind == OP_VARIABLE) {
-              t1->kind = OP_ADDRESS;
-              listAddNodeTail(ir, newIRCode(IR_GET_ADDR, t1, t1));
+              getAdressAndSwap(t1, ir);
             }
 
             char* id = getID(getMBTreeNodeNextSibling(child2));
@@ -436,35 +468,48 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
               offset += getMemSize(fl->type);
             }
 
-            operandTmp2Addr(place);
-            place->type = t;
-            listAddNodeTail(
-                ir, newIRCode(IR_ADD, place, t1,
-                              newOperand(OP_CONSTANT, (void*)offset, NULL)));
+            if (isLVal) {
+              operandTmp2Addr(place);
+              place->type = t;
+              listAddNodeTail(
+                  ir, newIRCode(IR_ADD, place, t1,
+                                newOperand(OP_CONSTANT, (void*)offset, NULL)));
+            } else {
+              Operand* t2 = newOperand(OP_TEMP, getTempNo, NULL);
+              listAddNodeTail(
+                  ir, newIRCode(IR_ADD, t2, t1,
+                                newOperand(OP_CONSTANT, (void*)offset, NULL)));
+              listAddNodeTail(ir, newIRCode(IR_GET_VALUE, place, t2));
+            }
             break;
           }
           case _LB: {
             // Exp -> Exp LB Exp RB
             Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
             Operand* t2 = newOperand(OP_TEMP, getTempNo, NULL);
-            ir = translateExp(child, t1);
-            List* ir2 = translateExp(getMBTreeNodeNextSibling(child2), t2);
-            listJoin(ir, ir2);
-            freeList(ir2);
+            ir = translateExp(child, t1, IS_LVAL);
+            List* ir2 =
+                translateExp(getMBTreeNodeNextSibling(child2), t2, NOT_LVAL);
+            joinAndFree(ir, ir2);
 
             if (t1->kind == OP_VARIABLE) {
-              t1->kind = OP_ADDRESS;
-              listAddNodeTail(ir, newIRCode(IR_GET_ADDR, t1, t1));
+              getAdressAndSwap(t1, ir);
             }
 
-            operandTmp2Addr(place);
-            place->type = t1->type->array.element;
+            Type* t = t1->type->array.element;
+            Operand* t3 = newOperand(OP_TEMP, getTempNo, NULL);
             listAddNodeTail(
                 ir,
-                newIRCode(IR_MUL, t2, t2,
-                          newOperand(OP_CONSTANT,
-                                     (void*)getMemSize(place->type), NULL)));
-            listAddNodeTail(ir, newIRCode(IR_ADD, place, t1, t2));
+                newIRCode(IR_MUL, t3, t2,
+                          newOperand(OP_CONSTANT, (void*)getMemSize(t), NULL)));
+            if (isLVal) {
+              operandTmp2Addr(place);
+              place->type = t;
+              listAddNodeTail(ir, newIRCode(IR_ADD, place, t1, t3));
+            } else {
+              listAddNodeTail(ir, newIRCode(IR_ADD, t3, t1, t3));
+              listAddNodeTail(ir, newIRCode(IR_GET_VALUE, place, t3));
+            }
             break;
           }
           default:
@@ -476,13 +521,13 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
     }
     case _LP: {
       // Exp -> LP Exp RP
-      ir = translateExp(getMBTreeNodeNextSibling(child), place);
+      ir = translateExp(getMBTreeNodeNextSibling(child), place, isLVal);
       break;
     }
     case _MINUS: {
       // Exp -> MINUS Exp
       Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-      ir = translateExp(getMBTreeNodeNextSibling(child), t1);
+      ir = translateExp(getMBTreeNodeNextSibling(child), t1, NOT_LVAL);
       Operand* t2 = newOperand(OP_CONSTANT, 0, NULL);
       listAddNodeTail(ir, newIRCode(IR_SUB, place, t2, t1));
       break;
@@ -494,8 +539,7 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
       listAddNodeTail(
           ir, newIRCode(IR_ASSIGN, place, newOperand(OP_CONSTANT, 0, NULL)));
       List* ir2 = translateCond(node, label_true, label_false);
-      listJoin(ir, ir2);
-      freeList(ir2);
+      joinAndFree(ir, ir2);
       listAddNodeTail(ir, newIRCode(IR_LABEL, label_true));
       listAddNodeTail(ir, newIRCode(IR_ASSIGN, place,
                                     newOperand(OP_CONSTANT, (void*)1, NULL)));
@@ -510,11 +554,37 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
       child = getMBTreeNodeNextSibling(child);
       if (child == NULL) {
         // Exp -> ID
-        place->type = t;
-        place->var_name = id;
-        place->kind = OP_VARIABLE;
-
         ir = newList(NULL, NULL, NULL);
+
+        Operand* op1 = newOperand(OP_VARIABLE, id, t);
+        if (isLVal) {
+          place->type = t;
+          place->var_name = id;
+          place->kind = OP_VARIABLE;
+        }
+
+        if (parmList) {
+          ListIter* iter = listGetIterator(parmList, ITER_HEAD);
+          for (ListNode* node = listNext(iter); node; node = listNext(iter)) {
+            Operand* op = node->value;
+            if (op->kind == OP_ADDRESS && strcmp(op->var_name, id) == 0) {
+              op1 = op;
+              break;
+            }
+          }
+        }
+
+        if (op1->kind == OP_ADDRESS) {
+          if (isLVal) {
+            place->kind = OP_ADDRESS;
+          } else {
+            listAddNodeTail(ir, newIRCode(IR_GET_VALUE, place, op1));
+          }
+        } else {
+          if (!isLVal) {
+            listAddNodeTail(ir, newIRCode(IR_ASSIGN, place, op1));
+          }
+        }
       } else if (getMBTreeNodeType(child) == _LP) {
         child = getMBTreeNodeNextSibling(child);
         if (getMBTreeNodeType(child) == _RP) {
@@ -531,10 +601,13 @@ static List* translateExp(MBTreeNode* node, Operand* place) {
           // Exp -> ID LP Args RP
           List* argList = newList(NULL, NULL, NULL);
           ir = translateArgs(child, argList);
-          ListIter* iter = listGetIterator(argList, ITER_TAIL);
+          ListIter* iter = listGetIterator(argList, ITER_HEAD);
 
           if (strcmp(id, "write") == 0) {
             Operand* arg = listNext(iter)->value;
+            if (arg->kind == OP_ADDRESS) {
+              getValAndSwap(arg, ir);
+            }
             listAddNodeTail(ir, newIRCode(IR_WRITE, arg));
             place->kind = OP_CONSTANT;
             place->constant = 0;
@@ -588,7 +661,13 @@ static List* translateArgs(MBTreeNode* node, List* argList) {
 
   MBTreeNode* child = getMBTreeNodeFirstChild(node);  // Exp
   Operand* tmp = newOperand(OP_TEMP, getTempNo, NULL);
-  List* ir = translateExp(child, tmp);
+  List* ir = translateExp(child, tmp, IS_LVAL);
+
+  if (tmp->kind == OP_VARIABLE && tmp->type->kind == STRUCTURE) {
+    getAdressAndSwap(tmp, ir);
+  } else if (tmp->kind == OP_ADDRESS && tmp->type->kind == BASIC) {
+    getValAndSwap(tmp, ir);
+  }
   listAddNodeHead(argList, tmp);
 
   child = getMBTreeNodeNextSibling(child);
@@ -596,8 +675,7 @@ static List* translateArgs(MBTreeNode* node, List* argList) {
     // Args -> Exp COMMA Args
     assert(getMBTreeNodeType(child) == _COMMA);
     List* ir2 = translateArgs(getMBTreeNodeNextSibling(child), argList);
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   }
 
   return ir;
@@ -621,10 +699,10 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
         // Exp -> Exp RELOP Exp
         Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
         Operand* t2 = newOperand(OP_TEMP, getTempNo, NULL);
-        ir = translateExp(child, t1);
-        List* ir2 = translateExp(getMBTreeNodeNextSibling(child2), t2);
-        listJoin(ir, ir2);
-        freeList(ir2);
+        ir = translateExp(child, t1, NOT_LVAL);
+        List* ir2 =
+            translateExp(getMBTreeNodeNextSibling(child2), t2, NOT_LVAL);
+        joinAndFree(ir, ir2);
 
         listAddNodeTail(
             ir, newIRCode(IR_IF_GOTO, t1, getMBTreeNodeValue(child2).val_str,
@@ -639,8 +717,7 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
         listAddNodeTail(ir, newIRCode(IR_LABEL, label1));
         List* ir2 = translateCond(getMBTreeNodeNextSibling(child2), label_true,
                                   label_false);
-        listJoin(ir, ir2);
-        freeList(ir2);
+        joinAndFree(ir, ir2);
         break;
       }
       case _OR: {
@@ -650,8 +727,7 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
         listAddNodeTail(ir, newIRCode(IR_LABEL, label1));
         List* ir2 = translateCond(getMBTreeNodeNextSibling(child2), label_true,
                                   label_false);
-        listJoin(ir, ir2);
-        freeList(ir2);
+        joinAndFree(ir, ir2);
         break;
       }
       default: {
@@ -669,7 +745,7 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
 
 other:
   Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-  ir = translateExp(node, t1);
+  ir = translateExp(node, t1, NOT_LVAL);
   listAddNodeTail(ir, newIRCode(IR_IF_GOTO, t1, "!=",
                                 newOperand(OP_CONSTANT, 0, NULL), label_true));
   listAddNodeTail(ir, newIRCode(IR_GOTO, label_false));
@@ -693,8 +769,7 @@ static List* translateStmtList(MBTreeNode* node) {
     // StmtList -> Stmt StmtList
     ir = translateStmt(child);
     List* ir2 = translateStmtList(getMBTreeNodeNextSibling(child));
-    listJoin(ir, ir2);
-    freeList(ir2);
+    joinAndFree(ir, ir2);
   }
 
   return ir;
@@ -714,7 +789,7 @@ static List* translateStmt(MBTreeNode* node) {
     case _Exp: {
       // Stmt -> Exp SEMI
       Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-      ir = translateExp(child, t1);
+      ir = translateExp(child, t1, NOT_LVAL);
       break;
     }
     case _CompSt: {
@@ -725,7 +800,11 @@ static List* translateStmt(MBTreeNode* node) {
     case _RETURN: {
       // Stmt -> RETURN Exp SEMI
       Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
-      ir = translateExp(getMBTreeNodeNextSibling(child), t1);
+      ir = translateExp(getMBTreeNodeNextSibling(child), t1, IS_LVAL);
+
+      if (t1->kind == OP_ADDRESS) {
+        getValAndSwap(t1, ir);
+      }
 
       listAddNodeTail(ir, newIRCode(IR_RETURN, t1));
       break;
@@ -746,8 +825,7 @@ static List* translateStmt(MBTreeNode* node) {
       child = getMBTreeNodeNextSibling(child);  // Stmt
 
       List* ir2 = translateStmt(child);
-      listJoin(ir, ir2);
-      freeList(ir2);
+      joinAndFree(ir, ir2);
 
       child = getMBTreeNodeNextSibling(child);
       if (child != NULL) {  // ELSE
@@ -759,8 +837,7 @@ static List* translateStmt(MBTreeNode* node) {
 
         child = getMBTreeNodeNextSibling(child);  // Stmt
         ir2 = translateStmt(child);
-        listJoin(ir, ir2);
-        freeList(ir2);
+        joinAndFree(ir, ir2);
 
         listAddNodeTail(ir, newIRCode(IR_LABEL, label3));
       } else {
@@ -785,8 +862,7 @@ static List* translateStmt(MBTreeNode* node) {
       child = getMBTreeNodeNextSibling(child);  // Stmt
 
       List* ir2 = translateStmt(child);
-      listJoin(ir, ir2);
-      freeList(ir2);
+      joinAndFree(ir, ir2);
 
       listAddNodeTail(ir, newIRCode(IR_GOTO, label1));
       listAddNodeTail(ir, newIRCode(IR_LABEL, label3));
