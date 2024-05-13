@@ -691,6 +691,7 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
   MBTreeNode* child = getMBTreeNodeFirstChild(node);
 
   List* ir = NULL;
+  Operand* t1 = NULL;
 
   if (getMBTreeNodeType(child) == _Exp) {
     MBTreeNode* child2 = getMBTreeNodeNextSibling(child);
@@ -744,7 +745,7 @@ static List* translateCond(MBTreeNode* node, Operand* label_true,
   return ir;
 
 other:
-  Operand* t1 = newOperand(OP_TEMP, getTempNo, NULL);
+  t1 = newOperand(OP_TEMP, getTempNo, NULL);
   ir = translateExp(node, t1, NOT_LVAL);
   listAddNodeTail(ir, newIRCode(IR_IF_GOTO, t1, "!=",
                                 newOperand(OP_CONSTANT, 0, NULL), label_true));
