@@ -1,0 +1,79 @@
+
+FUNCTION f :
+PARAM aa
+PARAM bb
+PARAM cc
+RETURN #0
+
+FUNCTION bf :
+PARAM ab
+PARAM cb
+bb := #3
+t5 := ab
+t6 := cb
+t4 := t5 + t6
+RETURN t4
+
+FUNCTION cf :
+PARAM ca
+RETURN ca
+
+FUNCTION main :
+a := #6
+b := #7
+c := #8
+i := #0
+j := #0
+k := #0
+LABEL l1 :
+t20 := i
+t21 := a
+IF t20 < t21 GOTO l2
+GOTO l3
+LABEL l2 :
+LABEL l4 :
+t22 := j
+t23 := b
+IF t22 < t23 GOTO l5
+GOTO l6
+LABEL l5 :
+LABEL l7 :
+t24 := k
+t25 := c
+IF t24 < t25 GOTO l8
+GOTO l9
+LABEL l8 :
+ARG k
+ARG j
+ARG i
+t26 := CALL f
+t30 := i
+t31 := j
+IF t30 < t31 GOTO l10
+GOTO l11
+LABEL l10 :
+ARG j
+ARG i
+t32 := CALL bf
+GOTO l12
+LABEL l11 :
+ARG i
+t35 := CALL cf
+LABEL l12 :
+WRITE k
+t41 := k
+t40 := t41 + #1
+k := t40
+GOTO l7
+LABEL l9 :
+t45 := j
+t44 := t45 + #1
+j := t44
+GOTO l4
+LABEL l6 :
+t49 := i
+t48 := t49 + #1
+i := t48
+GOTO l1
+LABEL l3 :
+RETURN #0
