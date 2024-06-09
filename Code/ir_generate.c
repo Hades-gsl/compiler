@@ -65,20 +65,16 @@ static List* translateExp(MBTreeNode* node, Operand* place, int isLVal);
 static char* getID(MBTreeNode* node);
 static int getINT(MBTreeNode* node);
 
-static void displayIRCodeList(List* ir, FILE* out);
-
 // entry point for the IR generation
-void IRGenerate(MBTreeNode* node, FILE* fout) {
+List* IRGenerate(MBTreeNode* node) {
   if (node == NULL) {
-    return;
+    return NULL;
   }
 
   assert(getMBTreeNodeType(node) == _Program);
 
   // Program -> ExtDefList
-  List* ir = translateExtDefList(getMBTreeNodeFirstChild(node));
-
-  displayIRCodeList(ir, fout);
+  return translateExtDefList(getMBTreeNodeFirstChild(node));
 }
 
 // process ExtDefList node
@@ -613,7 +609,7 @@ static List* translateExp(MBTreeNode* node, Operand* place, int isLVal) {
             place->constant = 0;
           } else {
             ListNode* arg;
-            while (arg = listNext(iter)) {
+            while ((arg = listNext(iter)) != NULL) {
               listAddNodeTail(ir, newIRCode(IR_ARG, arg->value));
             }
             listAddNodeTail(
@@ -876,16 +872,4 @@ static List* translateStmt(MBTreeNode* node) {
   }
 
   return ir;
-}
-
-static void displayIRCodeList(List* ir, FILE* out) {
-  if (ir == NULL) {
-    return;
-  }
-
-  ListIter* iter = listGetIterator(ir, ITER_HEAD);
-  for (ListNode* node = listNext(iter); node; node = listNext(iter)) {
-    printIRCode(out, node->value);
-  }
-  freeListIterator(iter);
 }

@@ -73,6 +73,7 @@ int typeEqual(Type* a, Type* b) {
                fieldListEqual(a->function.params, b->function.params);
     }
   }
+  return -1;
 }
 
 void freeType(Type* t) {
@@ -424,4 +425,24 @@ void printIRCode(FILE* fout, IRCode* ir) {
   if (s3) {
     free(s3);
   }
+}
+
+void displayIRCodeList(List* ir, FILE* out) {
+  if (ir == NULL) {
+    return;
+  }
+
+  ListIter* iter = listGetIterator(ir, ITER_HEAD);
+  for (ListNode* node = listNext(iter); node; node = listNext(iter)) {
+    printIRCode(out, node->value);
+  }
+  freeListIterator(iter);
+}
+
+/*------------------------------mips32 generate------------------------------*/
+
+Variable* newVariable(Operand* op, int offset, int reg) {
+  Variable* var = malloc(sizeof(Variable));
+  *var = (Variable){.op = op, .offset = offset, .reg = reg};
+  return var;
 }

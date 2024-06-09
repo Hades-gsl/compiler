@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "list.h"
+
 /*-------------------lexical analysis and syntax analysis-------------------*/
 // the type of a node
 typedef enum {
@@ -296,5 +298,61 @@ typedef struct IRCode {
 
 IRCode* newIRCode(int kind, ...);
 void printIRCode(FILE* fout, IRCode* ir);
+void displayIRCodeList(List* ir, FILE* out);
+
+/*------------------------------mips32 generate------------------------------*/
+
+typedef struct Variable {
+  Operand* op;
+  int offset;
+  int reg;
+} Variable;
+
+Variable* newVariable(Operand* op, int offset, int reg);
+
+typedef struct Register {
+  enum {
+    REG_ZERO,  // zero
+    REG_AT,    // at
+    REG_V0,    // v0
+    REG_V1,    // v1
+    REG_A0,    // a0
+    REG_A1,    // a1
+    REG_A2,    // a2
+    REG_A3,    // a3
+    REG_T0,    // t0
+    REG_T1,    // t1
+    REG_T2,    // t2
+    REG_T3,    // t3
+    REG_T4,    // t4
+    REG_T5,    // t5
+    REG_T6,    // t6
+    REG_T7,    // t7
+    REG_S0,    // s0
+    REG_S1,    // s1
+    REG_S2,    // s2
+    REG_S3,    // s3
+    REG_S4,    // s4
+    REG_S5,    // s5
+    REG_S6,    // s6
+    REG_S7,    // s7
+    REG_T8,    // t8
+    REG_T9,    // t9
+    REG_K0,    // k0
+    REG_K1,    // k1
+    REG_GP,    // gp
+    REG_SP,    // sp
+    REG_FP,    // fp
+    REG_RA     // ra
+  } kind;
+  int used;
+  Variable* var;
+} Register;
+
+static const char* register_names[] = {
+    "$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
+    "$t0",   "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
+    "$s0",   "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+    "$t8",   "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
 #endif  // DATA_H

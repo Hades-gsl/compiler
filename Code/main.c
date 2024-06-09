@@ -16,7 +16,8 @@ int translateEnabled = 1;
 extern int yyparse();
 extern int yyrestart(FILE*);
 extern void semanticAnalysis(MBTreeNode* node);
-extern void IRGenerate(MBTreeNode* node, FILE* fout);
+extern List* IRGenerate(MBTreeNode* node);
+extern void MIPS32Generate(List* irList, FILE* fout);
 extern char* strdup(const char*);
 extern int yydebug;
 
@@ -79,12 +80,21 @@ int main(int argc, char** argv) {
         }
       }
 
-      IRGenerate(root, fout);
+      List* ir = IRGenerate(root);
+
+      if (argc > 3) {
+        FILE* irout = fopen(argv[3], "w");
+        displayIRCodeList(ir, irout);
+        fclose(irout);
+      }
+      // displayIRCodeList(ir, fout);
+
+      MIPS32Generate(ir, fout);
 
       if (argc > 2) fclose(fout);
     } else {
       fprintf(stderr,
-              "Cannot translate: Code contains variables of multi-dimensional "
+              "Cannot translate: Code contains variables of multi-dimensional"
               "array type or parameters of array type.\n");
     }
   }
