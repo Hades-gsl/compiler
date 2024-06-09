@@ -11,6 +11,48 @@ extern char* strdup(const char*);
 /*-------------------lexical analysis and syntax analysis-------------------*/
 Val val_str(const char* s) { return (Val){.val_str = strdup(s)}; }
 
+MBTreeNode* newMBTreeNodeData(Val val, Node_type type, unsigned int lineno) {
+  Data* data = (Data*)malloc(sizeof(Data));
+  *data = (Data){.type = type, .value = val, .lineno = lineno};
+  return newMBTreeNode(data);
+}
+
+void displayMBTreeNode(const MBTreeNode* node, unsigned indent) {
+  if (node == NULL || getMBTreeNodeType(node) == _Empty) return;
+  if (node->firstChild != NULL && getMBTreeNodeType(node->firstChild) == _Empty)
+    return;
+
+  for (int i = 0; i < indent; i++) {
+    printf(" ");
+  }
+  if (is_non_terminal(getMBTreeNodeType(node))) {
+    printf("%s (%u)\n", type_strs[getMBTreeNodeType(node)],
+           getMBTreeNodeLineNo(node));
+  } else {
+    printf("%s", type_strs[getMBTreeNodeType(node)]);
+    switch (getMBTreeNodeType(node)) {
+      case _ID:
+      case _TYPE:
+        printf(": %s\n", getMBTreeNodeValue(node).val_str);
+        break;
+      case _INT:
+        printf(": %d\n", getMBTreeNodeValue(node).val_int);
+        break;
+      case _FLOAT:
+        printf(": %f\n", getMBTreeNodeValue(node).val_float);
+        break;
+      default:
+        printf("\n");
+        break;
+    }
+  }
+
+  for (MBTreeNode* child = node->firstChild; child != NULL;
+       child = child->nextSibling) {
+    displayMBTreeNode(child, indent + 2);
+  }
+}
+
 /*-----------------------------semantic analysis-----------------------------*/
 Type* newTypeBasic(int basic) {
   Type* t = malloc(sizeof(Type));

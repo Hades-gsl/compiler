@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "list.h"
+#include "mbtree.h"
 
 /*-------------------lexical analysis and syntax analysis-------------------*/
 // the type of a node
@@ -103,7 +104,14 @@ typedef struct {
   unsigned int lineno;
 } Data;
 
+#define getMBTreeNodeType(node) (((Data*)node->data)->type)
+#define getMBTreeNodeValue(node) (((Data*)node->data)->value)
+#define getMBTreeNodeLineNo(node) (((Data*)node->data)->lineno)
+
 Val val_str(const char* s);
+MBTreeNode* newMBTreeNodeData(Val val, Node_type type, unsigned int lineno);
+// print the tree
+void displayMBTreeNode(const MBTreeNode* node, unsigned indent);
 
 static inline int is_non_terminal(const Node_type type) {
   return type >= _Program && type < _Empty;

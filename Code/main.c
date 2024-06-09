@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "data.h"
 #include "hash.h"
-#include "mbtree.h"
 #include "syntax.tab.h"
 
 #define FUNC_PTR_CAST(f) ((unsigned int (*)(const void*))f)

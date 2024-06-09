@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "syntax.tab.h"
-#include "mbtree.h"
+#include "data.h"
 
 extern int fileno(FILE *);
 
@@ -21,11 +21,11 @@ int yycolumn = 1;
 
 #ifdef DEBUG_LEXICAL
 #define YY_VAL(v, t)\
-    yylval = newMBTreeNode(v, _##t, yylineno);\
+    yylval = newMBTreeNodeData(v, _##t, yylineno);\
     printf("Line %d: %s\n", yylineno, yytext);\
     displayMBTreeNode(yylval, 4);
 #else
-#define YY_VAL(v, t) yylval = newMBTreeNode(v, _##t, yylineno);
+#define YY_VAL(v, t) yylval = newMBTreeNodeData(v, _##t, yylineno);
 #endif
 %}
 %option yylineno

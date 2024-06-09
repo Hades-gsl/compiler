@@ -3,10 +3,8 @@
 
 #include <stdlib.h>
 
-#include "data.h"
-
 typedef struct MBTreeNode {
-  Data* data;
+  void* data;
   struct MBTreeNode* firstChild;
   struct MBTreeNode* nextSibling;
 } MBTreeNode;
@@ -14,13 +12,9 @@ typedef struct MBTreeNode {
 #define getMBTreeNodeData(node) (node->data)
 #define getMBTreeNodeFirstChild(node) (node->firstChild)
 #define getMBTreeNodeNextSibling(node) (node->nextSibling)
-#define getMBTreeNodeType(node) (node->data->type)
-#define getMBTreeNodeValue(node) (node->data->value)
-#define getMBTreeNodeLineNo(node) (node->data->lineno)
 
 // create a new node
-MBTreeNode* newMBTreeNodeData(Data* Data);
-MBTreeNode* newMBTreeNode(Val val, Node_type type, unsigned int lineno);
+MBTreeNode* newMBTreeNode(void* data);
 
 // add children to the parent node, the last argument must be NULL
 // e.g. addMBTreeNode(parent, child1, child2, child3, NULL);
@@ -33,8 +27,5 @@ void removeMBTreeNode(MBTreeNode* parent, MBTreeNode* child);
 
 // will free the tree node recursively
 void freeMBTreeNode(MBTreeNode* node);
-
-// print the tree
-void displayMBTreeNode(const MBTreeNode* node, unsigned indent);
 
 #endif  // MBTREE_H

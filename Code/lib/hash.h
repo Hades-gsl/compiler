@@ -1,7 +1,9 @@
 #ifndef HASH_H
 #define HASH_H
 
-#include "data.h"
+#include <assert.h>
+#include <stddef.h>
+#include <stdlib.h>
 
 typedef struct HashEntry {
   void *key;

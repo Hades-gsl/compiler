@@ -1,7 +1,8 @@
 CC = gcc
 FLEX = flex
 BISON = bison
-CFLAGS = -std=c99
+CFLAGS = -std=c99 -Wall -Ilib -Wno-unused-variable -Wno-unused-function -lfl
+LDFLAGS = -lfl
 
 ifdef ENABLE_DEBUG 
     CFLAGS += -DDEBUG -g
@@ -11,8 +12,13 @@ ifdef MEM_CHECK
 	CFLAGS += -fsanitize=address -fno-omit-frame-pointer
 endif
 
-CFILES = $(shell find ./ -name "*.c")
+LIB_SRC = $(wildcard lib/*.c)
+LIB_OBJ = $(LIB_SRC:.c=.o)
+LIB_TARGET = lib/libmylib.so
+
+CFILES = $(filter-out $(LIB_SRC), $(shell find ./ -name "*.c"))
 OBJS = $(CFILES:.c=.o)
+
 LFILE = $(shell find ./ -name "*.l")
 YFILE = $(shell find ./ -name "*.y")
 LFC = $(shell find ./ -name "*.l" | sed s/[^/]*\\.l/lex.yy.c/)
@@ -20,8 +26,11 @@ YFC = $(shell find ./ -name "*.y" | sed s/[^/]*\\.y/syntax.tab.c/)
 LFO = $(LFC:.c=.o)
 YFO = $(YFC:.c=.o)
 
-parser: clean syntax $(filter-out $(LFO),$(OBJS))
-	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl $(CFLAGS)
+parser: clean syntax $(LIB_TARGET) $(filter-out $(LFO),$(OBJS))
+	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -Llib -lmylib $(CFLAGS)
+
+$(LIB_TARGET):$(LIB_OBJ)
+	$(CC) -shared -o $@ $^ $(CFLAGS)
 
 syntax: lexical syntax-c
 	$(CC) -c $(YFC) -o $(YFO) $(CFLAGS)
@@ -42,6 +51,7 @@ clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
 	rm -f $(OBJS) $(OBJS:.o=.d)
 	rm -f $(LFC) $(YFC) $(YFC:.c=.h)
+	rm -f $(LIB_OBJ) $(LIB_TARGET)
 	rm -f *~
 
 
