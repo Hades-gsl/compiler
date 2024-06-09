@@ -160,11 +160,12 @@ static void setupStackFrame(ListNode* node) {
       case IR_FUNCTION:
       case IR_GOTO:
         break;
-      case IR_PARAM:
+      case IR_PARAM: {
         Variable* var = newVariable(ir->op, BASIC_MEM_SIZE * param_num + 8, -1);
         htAdd(varTable, operand2str(ir->op), var);
         param_num++;
         break;
+      }
       case IR_ARG:
       case IR_RETURN:
       case IR_READ:
