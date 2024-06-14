@@ -283,7 +283,11 @@ static void genLabel(IRCode* ir, FILE* fout) {
 static void genFunction(IRCode* ir, FILE* fout) {
   assert(ir && ir->kind == IR_FUNCTION);
 
-  fprintf(fout, "\n%s:\n", operand2str(ir->op));
+  if (strcmp(operand2str(ir->op), "main") == 0) {
+    fprintf(fout, "\n%s:\n", operand2str(ir->op));
+  } else {
+    fprintf(fout, "\nfunc_%s:\n", operand2str(ir->op));
+  }
   fprintf(fout, "\tmove $fp, $sp\n");
   fprintf(fout, "\taddi $sp, $sp, %d\n", offset);
 }
@@ -516,7 +520,11 @@ static void genCall(IRCode* ir, FILE* fout) {
   // save $ra and $fp
   SAVE_FP_RA();
 
-  fprintf(fout, "\tjal %s\n", operand2str(ir->right));
+  if (strcmp(operand2str(ir->right), "main") == 0) {
+    fprintf(fout, "\tjal %s\n", operand2str(ir->right));
+  } else {
+    fprintf(fout, "\tjal func_%s\n", operand2str(ir->right));
+  }
 
   // restore $ra and $fp
   RESTORE_FP_RA();

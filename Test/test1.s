@@ -21,7 +21,7 @@ write:
 	move $v0, $0
 	jr $ra
 
-f:
+func_f:
 	move $fp, $sp
 	addi $sp, $sp, -104
 	li $t0, 0
@@ -29,7 +29,7 @@ f:
 	move $sp, $fp
 	jr $ra
 
-bf:
+func_bf:
 	move $fp, $sp
 	addi $sp, $sp, -108
 	li $t0, 3
@@ -47,7 +47,7 @@ bf:
 	move $sp, $fp
 	jr $ra
 
-cf:
+func_cf:
 	move $fp, $sp
 	addi $sp, $sp, -92
 	lw $t0, 8($fp) # ca
@@ -112,7 +112,7 @@ l8:
 	addi $sp, $sp, -8
 	sw $ra, 0($sp)
 	sw $fp, 4($sp)
-	jal f
+	jal func_f
 	lw $ra, 0($sp)
 	lw $fp, 4($sp)
 	addi $sp, $sp, 8
@@ -136,7 +136,7 @@ l10:
 	addi $sp, $sp, -8
 	sw $ra, 0($sp)
 	sw $fp, 4($sp)
-	jal bf
+	jal func_bf
 	lw $ra, 0($sp)
 	lw $fp, 4($sp)
 	addi $sp, $sp, 8
@@ -150,7 +150,7 @@ l11:
 	addi $sp, $sp, -8
 	sw $ra, 0($sp)
 	sw $fp, 4($sp)
-	jal cf
+	jal func_cf
 	lw $ra, 0($sp)
 	lw $fp, 4($sp)
 	addi $sp, $sp, 8
